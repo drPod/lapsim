@@ -2,3 +2,6 @@
 __pycache__/
 logs/
 *.cv.png
+__pycache__/
+*.pyc
+logs/

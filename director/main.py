@@ -17,8 +17,8 @@ from . import config as config_mod
 from .cvcheck import analyse
 from .engine import Engine
 from .frames import HttpFrames, ReplayFrames
-from .sinks import JsonlLog, RestyleSink, VRSink
-from .vlm import VLM
+from .sinks import JsonlLog, RestyleSink, TraceSink, VRSink
+from .vlm import VLM, encode_jpeg
 
 log = logging.getLogger("director")
 
@@ -41,6 +41,10 @@ class Director:
                 self.sinks.append(("vr", VRSink(s["vr"])))
             if s["restyle"].get("enabled"):
                 self.sinks.append(("restyle", RestyleSink(s["restyle"])))
+        self.trace = None
+        if s.get("trace", {}).get("enabled"):
+            self.trace = TraceSink(s["trace"]["url"])
+            self.log.listeners.append(self.trace.push)
         self.director_task: asyncio.Task | None = None
         self.last_vitals = 0.0
         self.tick_n = 0
@@ -78,7 +82,7 @@ class Director:
             return
         for c in calls:
             c["source"] = "director"
-        self.log.write("director", calls=calls, **meta)
+        self.log.write("director", calls=calls, context=ctx, **meta)
         await self.run_calls(calls, time.time())
 
     async def tick(self, dt: float):
@@ -98,8 +102,10 @@ class Director:
             except Exception as e:  # noqa: BLE001
                 obs = {"error": repr(e)}
         fused = self.engine.fuse(now, cv, obs)
-        self.log.write("observation", frame=fname, cv=cv, vlm=obs,
-                       fused={k: fused[k] for k in ("left", "right", "bag_shift", "vlm_pulling")})
+        thumb = encode_jpeg(img, 384) if self.trace else None
+        self.log.write("observation", frame=fname, cv=cv, vlm=obs, tick=self.tick_n,
+                       fused={k: fused[k] for k in ("left", "right", "bag_shift", "vlm_pulling")},
+                       _extra={"thumb": thumb} if thumb else None)
         log.info("tick %d  L=%s(cv %s/vlm %s) R=%s(cv %s/vlm %s)  vlm %sms cv %sms", self.tick_n,
                  fused["left"]["on"], fused["left"]["cv"], fused["left"]["vlm"],
                  fused["right"]["on"], fused["right"]["cv"], fused["right"]["vlm"],
@@ -110,7 +116,7 @@ class Director:
         if now - self.last_vitals >= self.cfg["sinks"].get("vitals_period_s", 2.0):
             self.last_vitals = now
             ev = self.engine.vitals.event(int(self.cfg["sinks"].get("vitals_period_s", 2.0) * 1000))
-            self.log.write("vitals", **self.engine.vitals.summary())
+            self.log.write("vitals", **self.engine.vitals.summary(), state=self.engine.snapshot(now))
             await self.emit([ev], {"name": "vitals"})
 
         if self.cfg["vlm"].get("use_director_llm") and (self.director_task is None or self.director_task.done()):
@@ -127,6 +133,8 @@ class Director:
         return True
 
     async def run(self, max_ticks: int | None = None):
+        if self.trace:
+            await self.trace.start()
         for _, s in self.sinks:
             if hasattr(s, "start"):
                 await s.start()

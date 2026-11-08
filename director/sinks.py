@@ -97,8 +97,39 @@ class RestyleSink:
 class JsonlLog:
     def __init__(self, path):
         self.f = open(path, "a", buffering=1)
+        self.listeners = []
 
-    def write(self, kind: str, **data):
+    def write(self, kind: str, _extra: dict | None = None, **data):
         rec = {"ts": round(time.time(), 3), "iso": time.strftime("%H:%M:%S"), "kind": kind, **data}
         self.f.write(json.dumps(rec, default=str) + "\n")
+        for fn in self.listeners:
+            fn({**rec, **(_extra or {})})
         return rec
+
+
+class TraceSink:
+    """Mirrors every log record to the dashboard (POST /api/trace on the VR server). Never blocks the loop."""
+
+    def __init__(self, url: str):
+        self.url = url
+        self.http = httpx.AsyncClient(timeout=3)
+        self.q: asyncio.Queue = asyncio.Queue(maxsize=200)
+
+    def push(self, rec: dict):
+        try:
+            self.q.put_nowait(json.loads(json.dumps(rec, default=str)))
+        except asyncio.QueueFull:
+            pass
+
+    async def start(self):
+        asyncio.create_task(self._run())
+
+    async def _run(self):
+        while True:
+            batch = [await self.q.get()]
+            while not self.q.empty() and len(batch) < 20:
+                batch.append(self.q.get_nowait())
+            try:
+                await self.http.post(self.url, json=batch)
+            except Exception as e:  # noqa: BLE001
+                log.debug("trace post failed: %s", e)

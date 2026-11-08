@@ -17,7 +17,7 @@ vlm:
   observer_max_tokens: 300
   director_max_tokens: 400
   image_width: 768          # frames are downscaled before upload
-  timeout_s: 15
+  timeout_s: 30
   use_director_llm: true    # false = rules only (no narrative LLM call)
 
 contact:
@@ -35,13 +35,16 @@ random_events:
 sinks:
   vr:
     enabled: true
-    ws_url: wss://8787-34255b7eef89.replicas.dev/ws
-    http_url: https://8787-34255b7eef89.replicas.dev/api/events
+    ws_url: ws://127.0.0.1:8787/ws
+    http_url: http://127.0.0.1:8787/api/events
     name: nemotron-director
   restyle:
     enabled: true
     url: http://127.0.0.1:8090     # live-restyle server on the GPU (POST /events)
     path: /events
+  trace:
+    enabled: true
+    url: http://127.0.0.1:8787/api/trace   # dashboard feed (lap-sim-vr /dashboard.html)
   vitals_period_s: 2.0
 
 log_dir: logs

@@ -139,32 +139,41 @@ class VLM:
             obs = json.loads(content[content.index("{"): content.rindex("}") + 1])
         except (ValueError, json.JSONDecodeError):
             obs = {"error": "unparseable", "raw": content[:400]}
+        obs["_raw"] = content[:600]
         obs["_ms"] = round(ms)
         obs["_tokens"] = usage.get("completion_tokens")
         return obs
 
     def direct(self, context: dict) -> tuple[list[dict], dict]:
+        # JSON mode instead of the OpenAI `tools` field: works on a vLLM started without a tool-call parser.
+        system = (DIRECTOR_SYSTEM + "\n\nTool catalog (JSON schema):\n" + json.dumps(TOOLS, separators=(",", ":"))
+                  + '\n\nReply with only a JSON object: {"tool_calls": [{"name": <tool name>, "arguments": {...}}]}')
         msg, ms, usage = self._chat({
             "messages": [
-                {"role": "system", "content": DIRECTOR_SYSTEM},
+                {"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(context, separators=(",", ":"))},
             ],
-            "tools": TOOLS,
-            "tool_choice": "auto",
             "max_tokens": self.cfg.get("director_max_tokens", 400),
             "temperature": 0.4,
+            "response_format": {"type": "json_object"},
         })
+        content = (msg.get("content") or "").split("</think>")[-1].strip()
         calls = []
-        for tc in msg.get("tool_calls") or []:
-            fn = tc.get("function", {})
-            args = fn.get("arguments") or "{}"
-            try:
-                args = json.loads(args) if isinstance(args, str) else args
-            except json.JSONDecodeError:
-                args = {}
-            calls.append({"name": fn.get("name"), "arguments": args})
+        try:
+            raw = json.loads(content[content.index("{"): content.rindex("}") + 1]).get("tool_calls") or []
+        except (ValueError, json.JSONDecodeError, AttributeError):
+            raw = []
+        for c in raw if isinstance(raw, list) else []:
+            if not isinstance(c, dict):
+                continue
+            args = c.get("arguments") or {}
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    args = {}
+            calls.append({"name": c.get("name"), "arguments": args})
         if not calls:
-            calls = parse_toolcall_text(msg.get("content") or "")
-        calls = [c for c in calls if c["name"] in TOOL_NAMES]
-        return calls, {"ms": round(ms), "tokens": usage.get("completion_tokens"),
-                       "text": (msg.get("content") or "")[:300]}
+            calls = parse_toolcall_text(content)
+        calls = [c for c in calls if c["name"] in TOOL_NAMES][:2]
+        return calls, {"ms": round(ms), "tokens": usage.get("completion_tokens"), "text": content[:600]}

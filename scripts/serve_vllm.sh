@@ -21,9 +21,6 @@ docker run -d --name nemotron-vllm --gpus all --ipc=host --restart unless-stoppe
   --trust-remote-code "${QUANT[@]}" --video-pruning-rate 0 \
   --max-model-len 16384 --max-num-seqs 8 --gpu-memory-utilization "$GPU_UTIL" \
   --limit-mm-per-prompt '{"image": 2, "video": 0}' \
-  --enable-auto-tool-choice \
-  --tool-parser-plugin "/root/.cache/huggingface/hub/models--${MODEL//\//--}/snapshots/$(basename "$SNAP")/llama_nemotron_toolcall_parser_no_streaming.py" \
-  --tool-call-parser llama_nemotron_json \
   ${EXTRA_ARGS:-}
 echo "waiting for vLLM on 127.0.0.1:8001 ..."
 for i in $(seq 1 180); do
