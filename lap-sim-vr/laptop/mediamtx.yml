@@ -1,0 +1,23 @@
+# MediaMTX config for a laptop + USB webcam (run with `npm run mediamtx`).
+# Publish the webcam either from the browser (https://<laptop>:5173/sender.html, WHIP)
+# or with ffmpeg to rtsp://localhost:8554/cam (see README).
+logLevel: info
+rtsp: true
+rtmp: false
+hls: false
+srt: false
+moq: false
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcAllowOrigins: ["*"]
+webrtcAdditionalHosts: []
+paths:
+  cam:
+    # Uncomment to have MediaMTX start ffmpeg itself (macOS example; see README for Linux/Windows):
+    # runOnInit: >
+    #   ffmpeg -f avfoundation -framerate 30 -video_size 1280x720 -i "0"
+    #   -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -b:v 3M -pix_fmt yuv420p
+    #   -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
+    # runOnInitRestart: yes
+  all_others:

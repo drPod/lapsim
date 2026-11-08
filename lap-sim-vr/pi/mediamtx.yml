@@ -1,0 +1,41 @@
+# MediaMTX config for the Raspberry Pi 5 box camera.
+# Install: see pi/setup.sh. The WebXR app reads the stream at  http://<pi>:8889/cam/whep
+# (proxied through the lap-sim-vr server as /mediamtx/cam/whep).
+logLevel: info
+
+# Only WebRTC (for the headset) and RTSP (handy for VLC debugging) are needed.
+rtsp: true
+rtmp: false
+hls: false
+srt: false
+moq: false
+
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcAllowOrigins: ["*"]
+# If the Quest can't connect (multiple interfaces / docker), put the Pi's LAN IP here:
+webrtcAdditionalHosts: []
+
+paths:
+  cam:
+    source: rpiCamera
+    # 720p30 keeps glass-to-glass latency low (~150-250 ms on a Pi 5) and CPU sane:
+    # the Pi 5 has no hardware H.264 encoder, so MediaMTX encodes in software.
+    rpiCameraWidth: 1280
+    rpiCameraHeight: 720
+    rpiCameraFPS: 30
+    rpiCameraIDRPeriod: 30       # keyframe every second -> fast (re)connects
+    rpiCameraBitrate: 3000000
+    rpiCameraAfMode: continuous  # Camera Module 3 autofocus; ignored by fixed-focus modules
+    rpiCameraAfRange: macro      # the box is shallow: prefer close focus
+    rpiCameraHFlip: false
+    rpiCameraVFlip: false
+
+  # Alternative: a USB webcam plugged into the Pi. Comment out `cam` above and use:
+  # cam:
+  #   runOnInit: >
+  #     ffmpeg -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30 -i /dev/video0
+  #     -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -b:v 3M -pix_fmt yuv420p
+  #     -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
+  #   runOnInitRestart: yes

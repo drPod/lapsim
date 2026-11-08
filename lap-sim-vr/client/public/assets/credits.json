@@ -1,0 +1,130 @@
+[
+ {
+  "what": "Anesthesia Machine on a Medical Cart",
+  "author": "kkso199",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/6b28fafc23244ef9a47e84dbde09b5a4",
+  "use": "anesthesia"
+ },
+ {
+  "what": "Endoscope Camera Cart",
+  "author": "krio302",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/bd483063aa0d4ab9b43e3cf79240c61b",
+  "use": "endocart"
+ },
+ {
+  "what": "Operating Room Roof Monitors",
+  "author": "kareem.elgayyar",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/359aea63962d467cb81b42d942870644",
+  "use": "roofmon"
+ },
+ {
+  "what": "Iv drip stand",
+  "author": "saba.nazir",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/b503f5749e5841139f3bdd0bec20a7a6",
+  "use": "ivstand"
+ },
+ {
+  "what": "Suction-canister",
+  "author": "Dwayne.Barnett",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/34f41e2382fb4b66a9732cbebc8e872d",
+  "use": "suction"
+ },
+ {
+  "what": "Medical Props (instrument trolley)",
+  "author": "coa white",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/4b2e1a4c3f13432b9a0bc15355b27632",
+  "use": "trolley"
+ },
+ {
+  "what": "Hospital medical Treatment Cabinet",
+  "author": "Chenchanchong",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/9a9edfe3879e4889877bf1dff97c6105",
+  "use": "cabinet"
+ },
+ {
+  "what": "Male surgical doctor working 22",
+  "author": "deep3dstudio",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/79e23af07d1243c789b3372c6ec72c27",
+  "use": "surgeon"
+ },
+ {
+  "what": "Nurse in light blue scrubs",
+  "author": "restore50",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/fc7dad7d88f24687bc718a32d6ad4e8d",
+  "use": "nurse"
+ },
+ {
+  "what": "Hospital Operating Room/Examination Bed",
+  "author": "Chenchanchong",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/e3d748837ab14ef3aab1348faa20991d",
+  "use": "bed"
+ },
+ {
+  "what": "Hospital operating room (surgical light boom, extracted)",
+  "author": "Chenchanchong",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/a27400a73f4a43fbb1dda30031cb91c2",
+  "use": "orlamps",
+  "note": "parts extracted from the full room model"
+ },
+ {
+  "what": "Hospital operating room (equipment pendant, extracted)",
+  "author": "Chenchanchong",
+  "license": "CC BY 4.0",
+  "link": "https://sketchfab.com/3d-models/a27400a73f4a43fbb1dda30031cb91c2",
+  "use": "pendant",
+  "note": "parts extracted from the full room model"
+ },
+ {
+  "what": "Liver + gallbladder meshes (virtual abdomen)",
+  "author": "Paul Maria Scheikl et al. (LapGym / sofa_env)",
+  "license": "MIT",
+  "link": "https://github.com/ScheiklP/sofa_env",
+  "use": "abdomen"
+ },
+ {
+  "what": "\"Surgery\" HDRI (reflections / lighting)",
+  "author": "Oliksiy Yakovlyev, Poly Haven",
+  "license": "CC0",
+  "link": "https://polyhaven.com/a/surgery",
+  "use": "environment"
+ },
+ {
+  "what": "Demo laparoscope video",
+  "author": "Boer J, Boerma D, de Vries Reilingh T (J Med Case Reports 2011)",
+  "license": "CC BY 2.0",
+  "link": "https://commons.wikimedia.org/wiki/File:A-gallbladder-torsion-presenting-as-acute-cholecystitis-in-an-elderly-woman-A-case-report-1752-1947-5-588-S1.ogv",
+  "use": "demo feed"
+ },
+ {
+  "what": "three.js",
+  "author": "three.js authors",
+  "license": "MIT",
+  "link": "https://threejs.org",
+  "use": "engine"
+ },
+ {
+  "what": "IWER / @iwer/devui",
+  "author": "Meta",
+  "license": "MIT",
+  "link": "https://github.com/meta-quest/immersive-web-emulation-runtime",
+  "use": "testing"
+ },
+ {
+  "what": "MediaMTX reader.js / publisher.js",
+  "author": "bluenviron",
+  "license": "MIT",
+  "link": "https://github.com/bluenviron/mediamtx",
+  "use": "video"
+ }
+]

@@ -1,0 +1,111 @@
+{
+  "_note": "Sketchfab models used in the OR. Downloaded with scripts/fetch-sketchfab.mjs (needs SKETCHFAB_API_TOKEN), optimised with scripts/build-or-models.mjs into client/public/assets/or/. All CC BY 4.0 unless stated.",
+  "models": [
+    {
+      "name": "anesthesia",
+      "uid": "6b28fafc23244ef9a47e84dbde09b5a4",
+      "title": "Anesthesia Machine on a Medical Cart",
+      "author": "kkso199",
+      "license": "CC BY 4.0",
+      "ratio": 0.06
+    },
+    {
+      "name": "endocart",
+      "uid": "bd483063aa0d4ab9b43e3cf79240c61b",
+      "title": "Endoscope Camera Cart",
+      "author": "krio302",
+      "license": "CC BY 4.0",
+      "ratio": 0.12,
+      "error": 0.02,
+      "dropNormals": true
+    },
+    {
+      "name": "roofmon",
+      "uid": "359aea63962d467cb81b42d942870644",
+      "title": "Operating Room Roof Monitors",
+      "author": "kareem.elgayyar",
+      "license": "CC BY 4.0",
+      "ratio": 0.3
+    },
+    {
+      "name": "ivstand",
+      "uid": "b503f5749e5841139f3bdd0bec20a7a6",
+      "title": "Iv drip stand",
+      "author": "saba.nazir",
+      "license": "CC BY 4.0",
+      "ratio": 0.6
+    },
+    {
+      "name": "suction",
+      "uid": "34f41e2382fb4b66a9732cbebc8e872d",
+      "title": "Suction-canister",
+      "author": "Dwayne.Barnett",
+      "license": "CC BY 4.0",
+      "ratio": 0.3
+    },
+    {
+      "name": "trolley",
+      "uid": "4b2e1a4c3f13432b9a0bc15355b27632",
+      "title": "Medical Props (instrument trolley)",
+      "author": "coa white",
+      "license": "CC BY 4.0",
+      "ratio": 0.25
+    },
+    {
+      "name": "cabinet",
+      "uid": "9a9edfe3879e4889877bf1dff97c6105",
+      "title": "Hospital medical Treatment Cabinet",
+      "author": "Chenchanchong",
+      "license": "CC BY 4.0",
+      "ratio": 0.15
+    },
+    {
+      "name": "surgeon",
+      "uid": "79e23af07d1243c789b3372c6ec72c27",
+      "title": "Male surgical doctor working 22",
+      "author": "deep3dstudio",
+      "license": "CC BY 4.0",
+      "ratio": 0.25
+    },
+    {
+      "name": "nurse",
+      "uid": "fc7dad7d88f24687bc718a32d6ad4e8d",
+      "title": "Nurse in light blue scrubs",
+      "author": "restore50",
+      "license": "CC BY 4.0",
+      "ratio": 0.1
+    },
+    {
+      "name": "bed",
+      "uid": "e3d748837ab14ef3aab1348faa20991d",
+      "title": "Hospital Operating Room/Examination Bed",
+      "author": "Chenchanchong",
+      "license": "CC BY 4.0",
+      "ratio": 0.35
+    },
+    {
+      "name": "orlamps",
+      "uid": "a27400a73f4a43fbb1dda30031cb91c2",
+      "title": "Hospital operating room (surgical light boom, extracted)",
+      "author": "Chenchanchong",
+      "license": "CC BY 4.0",
+      "ratio": 0.3,
+      "extractedFrom": "room",
+      "nodes": [
+        "Obj3d66-594498-90-834_29"
+      ]
+    },
+    {
+      "name": "pendant",
+      "uid": "a27400a73f4a43fbb1dda30031cb91c2",
+      "title": "Hospital operating room (equipment pendant, extracted)",
+      "author": "Chenchanchong",
+      "license": "CC BY 4.0",
+      "ratio": 0.5,
+      "extractedFrom": "room",
+      "nodes": [
+        "Group-594498-941_64"
+      ]
+    }
+  ]
+}

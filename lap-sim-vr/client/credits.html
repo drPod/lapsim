@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lap Chole VR — credits</title><link rel="icon" href="data:,">
+<style>body{margin:0;padding:20px;background:#0d1117;color:#e6edf3;font:14px/1.5 system-ui,sans-serif}table{border-collapse:collapse;width:100%;max-width:1100px}td,th{border-bottom:1px solid #30363d;padding:6px 8px;text-align:left;vertical-align:top}th{color:#8b949e}a{color:#58a6ff}</style></head>
+<body><h2 style="margin-top:0">Credits &amp; licences</h2><p style="color:#8b949e">3D models from Sketchfab (downloaded through the Sketchfab Download API), optimised for Quest (simplified, KTX2 textures, meshopt).</p>
+<table id="t"><tr><th>Asset</th><th>Author</th><th>Licence</th><th>Used for</th></tr></table>
+<script type="module">
+const c = await fetch('./assets/credits.json').then((r) => r.json());
+document.getElementById('t').insertAdjacentHTML('beforeend', c.map((x) => `<tr><td><a href="${x.link}" target="_blank" rel="noopener">${x.what}</a>${x.note ? ` <span style="color:#8b949e">(${x.note})</span>` : ''}</td><td>${x.author}</td><td>${x.license}</td><td>${x.use}</td></tr>`).join(''));
+</script></body></html>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lap Chole VR — Director</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { --bg: #0d1117; --card: #161b22; --line: #30363d; --fg: #e6edf3; --mut: #8b949e; --red: #da3633; --amber: #d29922; --blue: #1f6feb; --green: #238636; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
+    header { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
+    header h1 { font-size: 17px; margin: 0; }
+    .pill { padding: 3px 10px; border-radius: 99px; background: #21262d; color: var(--mut); font-size: 12px; }
+    .pill.ok { background: #12361f; color: #3fb950; } .pill.bad { background: #3d1214; color: #ff7b72; }
+    main { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; padding: 14px 18px; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); margin: 0 0 10px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+    button { border: 1px solid var(--line); background: #21262d; color: var(--fg); border-radius: 7px; padding: 8px 12px; font: inherit; cursor: pointer; }
+    button:hover { border-color: #8b949e; }
+    button.red { background: var(--red); border-color: var(--red); color: #fff; }
+    button.amber { background: #9e6a03; border-color: #9e6a03; color: #fff; }
+    button.blue { background: var(--blue); border-color: var(--blue); color: #fff; }
+    button.green { background: var(--green); border-color: var(--green); color: #fff; }
+    input, select, textarea { background: #0d1117; color: var(--fg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; font: inherit; }
+    input[type=number] { width: 74px; }
+    input[type=range] { flex: 1; }
+    label { color: var(--mut); font-size: 12px; }
+    #log { font: 12px/1.45 ui-monospace, monospace; max-height: 260px; overflow: auto; white-space: pre-wrap; color: #c9d1d9; }
+    #log .err { color: #ff7b72; }
+    .wide { grid-column: 1 / -1; }
+    .vit { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 10px; align-items: center; }
+    textarea { width: 100%; min-height: 70px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🩺 Director panel</h1>
+    <span id="conn" class="pill">connecting…</span>
+    <span id="presence" class="pill">—</span>
+    <span id="tracker" class="pill bad">NO TRACKER</span>
+    <span style="flex:1"></span>
+    <button class="green" data-ev='{"type":"reset"}'>Reset scenario</button>
+    <button data-ev='{"type":"clear","target":"all"}'>Clear overlays</button>
+  </header>
+  <main>
+    <section>
+      <h2>Bleeding</h2>
+      <div class="row">
+        <button class="red" data-ev='{"type":"bleed","intensity":0.25}'>Ooze</button>
+        <button class="red" data-ev='{"type":"bleed","intensity":0.55}'>Bleed</button>
+        <button class="red" data-ev='{"type":"bleed","intensity":0.95,"pulsatile":true}'>Arterial (cystic a.)</button>
+        <button data-ev='{"type":"bleed","intensity":0}'>Stop / suction</button>
+      </div>
+      <div class="row">
+        <button class="amber" data-ev='{"type":"bile","intensity":0.5}'>Bile leak</button>
+        <button data-ev='{"type":"bile","intensity":0}'>Stop bile</button>
+      </div>
+      <div class="row"><label>intensity</label><input id="bleedI" type="range" min="0" max="1" step="0.05" value="0.5"><label><input id="bleedP" type="checkbox" checked> pulsatile</label><button id="bleedGo" class="red">Send</button></div>
+      <div class="row"><label>origin x</label><input id="bleedX" type="number" min="0" max="1" step="0.05" value="0.62"><label>y</label><input id="bleedY" type="number" min="0" max="1" step="0.05" value="0.38"></div>
+    </section>
+    <section>
+      <h2>Smoke / fog</h2>
+      <div class="row">
+        <button class="amber" data-ev='{"type":"smoke","intensity":0.45,"durationMs":5000}'>Cautery puff</button>
+        <button class="amber" data-ev='{"type":"smoke","intensity":0.85,"durationMs":12000}'>Heavy smoke</button>
+        <button class="amber" data-ev='{"type":"smoke","intensity":0.6,"durationMs":0}'>Fogged lens (stays)</button>
+        <button data-ev='{"type":"clear","target":"smoke"}'>Vent / wipe scope</button>
+      </div>
+    </section>
+    <section>
+      <h2>Warning banner</h2>
+      <div class="row"><input id="warnText" style="flex:1" value="Bleeding — cystic artery" /></div>
+      <div class="row">
+        <select id="warnLevel"><option>critical</option><option>warning</option><option>info</option></select>
+        <label>auto-hide s</label><input id="warnDur" type="number" min="0" value="0">
+        <button id="warnGo" class="red">Show</button>
+        <button data-ev='{"type":"clear","target":"warning"}'>Hide</button>
+      </div>
+      <div class="row">
+        <button data-ev='{"type":"warning","text":"CO2 embolism suspected","level":"critical"}'>CO2 embolism</button>
+        <button data-ev='{"type":"warning","text":"Insufflation pressure high","level":"warning"}'>Insufflation high</button>
+        <button data-ev='{"type":"warning","text":"Bile leak","level":"warning"}'>Bile leak</button>
+      </div>
+    </section>
+    <section>
+      <h2>Vitals</h2>
+      <div class="vit">
+        <label>HR</label><input id="vHr" type="number" value="78"><span></span>
+        <label>BP</label><input id="vBp" value="122/76" style="width:90px"><span></span>
+        <label>SpO2</label><input id="vSpo2" type="number" value="99"><span></span>
+        <label>EtCO2</label><input id="vEtco2" type="number" value="36"><span></span>
+        <label>RR</label><input id="vRr" type="number" value="12"><span></span>
+      </div>
+      <div class="row" style="margin-top:8px"><label>glide s</label><input id="vT" type="number" value="3"><button id="vGo" class="blue">Set vitals</button></div>
+      <div class="row">
+        <button data-ev='{"type":"vitals","hr":78,"bp":"122/76","spo2":99,"etco2":36,"rr":12}'>Stable</button>
+        <button data-ev='{"type":"vitals","hr":132,"bp":"84/48","spo2":95,"etco2":30,"transitionMs":8000}'>Hemorrhagic shock</button>
+        <button data-ev='{"type":"vitals","hr":118,"bp":"78/40","spo2":84,"etco2":14,"transitionMs":4000}'>CO2 embolism</button>
+        <button data-ev='{"type":"vitals","hr":44,"bp":"92/50","spo2":97,"transitionMs":3000}'>Vagal (brady)</button>
+        <button data-ev='{"type":"vitals","hr":96,"bp":"128/80","spo2":99,"etco2":52,"transitionMs":6000}'>Hypercapnia</button>
+      </div>
+    </section>
+    <section>
+      <h2>OR staff voice</h2>
+      <div class="row">
+        <select id="sayWho"><option>Anesthesia</option><option>Scrub nurse</option><option>Circulator</option><option>Attending</option></select>
+        <input id="sayText" style="flex:1" value="Pressure's dropping, what's going on down there?">
+        <button id="sayGo" class="blue">Say</button>
+      </div>
+      <div class="row">
+        <button data-ev='{"type":"say","speaker":"Anesthesia","text":"Pressure is dropping. Eighty-four over forty-eight."}'>"Pressure dropping"</button>
+        <button data-ev='{"type":"say","speaker":"Scrub nurse","text":"Clip applier is loaded."}'>"Clip applier loaded"</button>
+        <button data-ev='{"type":"say","speaker":"Attending","text":"Show me the critical view of safety before you clip anything."}'>"Critical view?"</button>
+        <button data-ev='{"type":"say","speaker":"Circulator","text":"Calling the blood bank now."}'>"Calling blood bank"</button>
+        <button data-ev='{"type":"clear","target":"captions"}'>Clear captions</button>
+      </div>
+    </section>
+    <section>
+      <h2>Laparoscope feed</h2>
+      <div class="row">
+        <button class="green" data-ev='{"type":"source","mode":"sim"}'>Virtual abdomen (sim)</button>
+        <button data-ev='{"type":"sim","action":"autopilot"}'>▶ Autopilot demo</button>
+        <button data-ev='{"type":"sim","action":"stop"}'>■ Stop autopilot</button>
+        <button data-ev='{"type":"sim","action":"reset"}'>Reset anatomy</button>
+      </div>
+      <div class="row" style="margin-top:4px"><label>AI frame URL</label><input id="frUrl" style="flex:1" placeholder="https://…/latest.jpg"></div>
+      <div class="row"><label>notify WS</label><input id="frWs" style="flex:1" placeholder="optional wss://… (any message = new frame)"><label>poll s</label><input id="frPoll" type="number" value="15" style="width:56px"></div>
+      <div class="row"><button id="frGo" class="green">AI-restyled feed (LIVE · AI)</button><button id="frNext">New frame now</button></div>
+      <div class="row">
+        <button data-ev='{"type":"source","mode":"auto"}'>Box camera (live → demo)</button>
+        <button data-ev='{"type":"source","mode":"live"}'>Live camera only</button>
+        <button class="amber" data-ev='{"type":"source","mode":"demo"}'>Demo clip</button>
+      </div>
+      <div class="row"><a href="./sender.html" target="_blank" style="color:#58a6ff">Laptop webcam sender ↗</a> · <a href="./" target="_blank" style="color:#58a6ff">VR view ↗</a></div>
+      <h2 style="margin-top:14px">Hardware hooks (future)</h2>
+      <div class="row">
+        <button data-ev='{"type":"actuator","device":"pump.bleed","value":0.8,"durationMs":5000}'>pump.bleed 80% 5s</button>
+        <button data-ev='{"type":"actuator","device":"servo.liver","value":30}'>servo.liver 30°</button>
+      </div>
+    </section>
+    <section class="wide">
+      <h2>Custom event (JSON) — same thing an agent would send</h2>
+      <div class="row"><textarea id="raw">{"type":"bleed","intensity":0.7,"origin":{"x":0.4,"y":0.3}}</textarea></div>
+      <div class="row"><button id="rawGo" class="blue">Send JSON</button><a href="./api/schema" target="_blank" style="color:#58a6ff">event schema ↗</a> · <a href="./credits.html" target="_blank" style="color:#58a6ff">credits</a></div>
+      <h2 style="margin-top:12px">Event log</h2>
+      <div id="log"></div>
+    </section>
+  </main>
+  <script type="module" src="./src/control.js"></script>
+</body>
+</html>

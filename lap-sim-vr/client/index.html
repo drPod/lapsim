@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lap Chole VR — OR</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0f14; overflow: hidden; font-family: system-ui, sans-serif; }
+    #hud { position: fixed; left: 12px; top: 10px; color: #cfd8e3; font-size: 13px; line-height: 1.5; background: rgba(0,0,0,.45);
+      padding: 8px 12px; border-radius: 8px; pointer-events: auto; max-width: 420px; }
+    #hud b { color: #fff; }
+    #hud a { color: #7cc4ff; }
+    #hud .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #888; margin-right: 6px; }
+    #hud .ok { background: #3ddc84; } #hud .warn { background: #ffb020; } #hud .bad { background: #ff4d4d; }
+    body.clean #hud { display: none; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div><b>Lap Chole VR</b> · <a href="./control.html" target="_blank">director panel ↗</a> · <a href="./credits.html" target="_blank">credits</a></div>
+    <div><span id="ws-dot" class="dot"></span><span id="ws-text">connecting…</span></div>
+    <div><span id="src-dot" class="dot"></span><span id="src-text">video: starting…</span></div>
+    <div><span id="trk-dot" class="dot bad"></span><b id="trk-text">NO TRACKER</b></div>
+    <div style="opacity:.75">Drag to look around. Press <b>Enter VR</b> on the Quest. Squeeze (grip) in VR to recenter.</div>
+  </div>
+  <script src="./vendor/reader.js"></script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

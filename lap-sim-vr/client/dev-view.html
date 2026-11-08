@@ -1,0 +1,18 @@
+<!doctype html><html><body style="margin:0;background:#888"><script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { gltfLoader, sceneStats } from './src/room.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(600, 450); r.toneMapping = THREE.AgXToneMapping; document.body.appendChild(r.domElement);
+const s = new THREE.Scene(); s.background = new THREE.Color(0x808080);
+s.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
+const url = q.get('m').includes('/') ? q.get('m') : `./assets/or/${q.get('m')}.glb`;
+const g = await gltfLoader(r).loadAsync(url);
+s.add(g.scene); window.__scene = g.scene; window.__THREE = THREE;
+const b = new THREE.Box3().setFromObject(g.scene), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
+const cam = new THREE.PerspectiveCamera(45, 4 / 3, 0.001, 1000);
+const d = Math.max(sz.x, sz.y, sz.z) * 1.7; if (q.has('top')) { cam.position.set(c.x, c.y + d, c.z + 0.001); cam.lookAt(c); } else if (q.has('front')) { cam.position.set(c.x, c.y, c.z + d); cam.lookAt(c); } else { cam.position.set(c.x + d * 0.6, c.y + d * 0.3, c.z + d * 0.8); cam.lookAt(c); }
+r.render(s, cam);
+const tex = new Set(); g.scene.traverse((o) => { if (o.isMesh) for (const m of [o.material].flat()) for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap']) if (m[k]) tex.add(`${m[k].image?.width}x${m[k].image?.height}`); });
+window.info = { ...sceneStats(g.scene), size: sz.toArray().map((v) => +v.toFixed(2)), tex: [...tex] }; window.done = true;
+</script></body></html>

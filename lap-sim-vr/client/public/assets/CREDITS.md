@@ -1,0 +1,6 @@
+- env/surgery_1k.hdr, env/surgery_4k.jpg — "Surgery" HDRI by Oliksiy Yakovlyev, https://polyhaven.com/a/surgery, CC0 (JPG tonemapped from the 4k HDR)
+- models/metal_stool_01.glb — Ulan Cabanilla, https://polyhaven.com/a/metal_stool_01, CC0
+- models/metal_trash_can.glb — GurJas Studios, https://polyhaven.com/a/metal_trash_can, CC0
+- models/kenney_*.glb — Furniture Kit by Kenney, https://kenney.nl/assets/furniture-kit, CC0
+- ../media/demo-lap-chole.mp4 — Boer J, Boerma D, de Vries Reilingh T (2011), J Med Case Reports 5:588, via Wikimedia Commons, CC BY 2.0 (cropped, transcoded)
+- ../vendor/reader.js, publisher.js — MediaMTX (bluenviron), MIT

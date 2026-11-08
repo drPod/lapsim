@@ -1,0 +1,498 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/lap-sim-vr/events.schema.json",
+  "title": "lap-sim-vr director/agent event",
+  "description": "One JSON message on ws://<host>/ws or POST /api/events. The server adds `id`, `ts` and `from` before broadcasting.",
+  "type": "object",
+  "required": [
+    "type"
+  ],
+  "oneOf": [
+    {
+      "title": "bleed",
+      "description": "Blood flooding the laparoscope view. intensity 0 stops the bleed (blood slowly drains).",
+      "properties": {
+        "type": {
+          "const": "bleed"
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "origin": {
+          "type": "object",
+          "description": "Where the bleed starts, in normalised screen coords (0,0 = top-left).",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        },
+        "pulsatile": {
+          "type": "boolean",
+          "description": "Arterial: spurts in time with the heart rate. Default true."
+        }
+      },
+      "required": [
+        "type",
+        "intensity"
+      ]
+    },
+    {
+      "title": "smoke",
+      "description": "Electrocautery smoke / lens fog. Decays over durationMs (0 = stays until cleared).",
+      "properties": {
+        "type": {
+          "const": "smoke"
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 8000
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    {
+      "title": "warning",
+      "description": "Red banner across the top of the laparoscope monitor.",
+      "properties": {
+        "type": {
+          "const": "warning"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "level": {
+          "enum": [
+            "info",
+            "warning",
+            "critical"
+          ],
+          "default": "critical"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "0 = until cleared"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ]
+    },
+    {
+      "title": "bile",
+      "description": "Bile flooding the view (green-yellow). intensity 0 stops it.",
+      "properties": {
+        "type": {
+          "const": "bile"
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "origin": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "type",
+        "intensity"
+      ]
+    },
+    {
+      "title": "clear",
+      "description": "Remove overlays.",
+      "properties": {
+        "type": {
+          "const": "clear"
+        },
+        "target": {
+          "enum": [
+            "all",
+            "bleed",
+            "bile",
+            "smoke",
+            "warning",
+            "captions"
+          ],
+          "default": "all"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    {
+      "title": "vitals",
+      "description": "Set vitals on the anaesthesia monitor. Any subset of fields; values glide over transitionMs.",
+      "properties": {
+        "type": {
+          "const": "vitals"
+        },
+        "hr": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "bp": {
+          "type": "string",
+          "pattern": "^\\d{2,3}/\\d{2,3}$",
+          "description": "\"systolic/diastolic\", e.g. \"120/80\""
+        },
+        "spo2": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "rr": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 80
+        },
+        "etco2": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 150
+        },
+        "temp": {
+          "type": "number",
+          "minimum": 25,
+          "maximum": 45
+        },
+        "transitionMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 3000
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    {
+      "title": "say",
+      "description": "An OR staff member speaks. Shown as a caption in VR and spoken with browser TTS, or plays audioUrl if given.",
+      "properties": {
+        "type": {
+          "const": "say"
+        },
+        "speaker": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "examples": [
+            "Anesthesia",
+            "Scrub nurse",
+            "Circulator",
+            "Attending"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "audioUrl": {
+          "type": "string",
+          "description": "Optional pre-rendered speech (e.g. from an agent's TTS)."
+        },
+        "voice": {
+          "type": "string",
+          "description": "Optional speechSynthesis voice name hint."
+        }
+      },
+      "required": [
+        "type",
+        "speaker",
+        "text"
+      ]
+    },
+    {
+      "title": "source",
+      "description": "Switch the laparoscope feed: sim = virtual abdomen (default), live = box camera, demo = sample clip, auto = live with demo fallback. frames = external frame stream (AI-restyled box camera): latest-frame URL + new-frame notifications, crossfaded.",
+      "properties": {
+        "type": {
+          "const": "source"
+        },
+        "mode": {
+          "enum": [
+            "sim",
+            "frames",
+            "live",
+            "demo",
+            "auto"
+          ]
+        },
+        "whep": {
+          "type": "string",
+          "description": "Optional WHEP URL override (default: server's /mediamtx/<path>/whep proxy)."
+        },
+        "url": {
+          "type": "string",
+          "description": "frames: latest-frame image URL (JPEG/PNG)"
+        },
+        "ws": {
+          "type": "string",
+          "description": "frames: optional WebSocket that announces new frames"
+        },
+        "pollMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "frames: polling fallback interval (0 = off)"
+        }
+      },
+      "required": [
+        "type",
+        "mode"
+      ]
+    },
+    {
+      "title": "frame",
+      "description": "A new frame is available on the external frame stream (optionally at a new URL). Displays re-fetch and crossfade.",
+      "properties": {
+        "type": {
+          "const": "frame"
+        },
+        "url": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    {
+      "title": "actuator",
+      "description": "HOOK ONLY (future hardware): forwarded to clients that said hello with role 'hardware' (Pi pump / servo daemons).",
+      "properties": {
+        "type": {
+          "const": "actuator"
+        },
+        "device": {
+          "type": "string",
+          "examples": [
+            "pump.bleed",
+            "pump.bile",
+            "servo.liver"
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "type",
+        "device",
+        "value"
+      ]
+    },
+    {
+      "title": "reset",
+      "description": "Clear overlays and captions and return vitals to baseline.",
+      "properties": {
+        "type": {
+          "const": "reset"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    {
+      "title": "hello",
+      "description": "Sent by a client right after connecting; not broadcast.",
+      "properties": {
+        "type": {
+          "const": "hello"
+        },
+        "role": {
+          "enum": [
+            "display",
+            "director",
+            "agent",
+            "hardware",
+            "observer"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "role"
+      ]
+    },
+    {
+      "title": "tools",
+      "description": "Instrument poses (high rate, 30-120 Hz) from the box tracker or any simulator. Not logged. Each tool pivots through a trocar (fulcrum): yaw/pitch rotate the shaft about the port's nominal axis, roll spins it, depth = trocar pivot -> jaw hinge.",
+      "properties": {
+        "type": {
+          "const": "tools"
+        },
+        "t": {
+          "type": "number",
+          "description": "sender timestamp, ms"
+        },
+        "tools": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "examples": [
+                  "left",
+                  "right",
+                  "assist",
+                  "scope"
+                ]
+              },
+              "port": {
+                "type": "string",
+                "examples": [
+                  "umbilical",
+                  "epigastric",
+                  "rsc",
+                  "raa"
+                ]
+              },
+              "tool": {
+                "enum": [
+                  "grasper",
+                  "maryland",
+                  "hook",
+                  "scissors",
+                  "clipper",
+                  "scope"
+                ]
+              },
+              "yaw": {
+                "type": "number",
+                "description": "rad"
+              },
+              "pitch": {
+                "type": "number",
+                "description": "rad"
+              },
+              "roll": {
+                "type": "number",
+                "description": "rad"
+              },
+              "depth": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.4,
+                "description": "m"
+              },
+              "jaw": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "0 closed .. 1 open"
+              },
+              "energy": {
+                "type": "boolean",
+                "description": "cautery pedal"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "type",
+        "tools"
+      ]
+    },
+    {
+      "title": "sim",
+      "description": "Virtual-abdomen control (reset | autopilot | stop) and, from the simulator, informational events (clip | cut).",
+      "properties": {
+        "type": {
+          "const": "sim"
+        },
+        "action": {
+          "enum": [
+            "reset",
+            "autopilot",
+            "stop",
+            "clip",
+            "cut"
+          ]
+        },
+        "target": {
+          "type": "string"
+        },
+        "index": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "how": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "action"
+      ]
+    }
+  ]
+}

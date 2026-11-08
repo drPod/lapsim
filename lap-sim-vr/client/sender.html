@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lap Chole VR — Laptop webcam sender</title>
+  <link rel="icon" href="data:," />
+  <style>
+    body { margin: 0; background: #0d1117; color: #e6edf3; font: 14px/1.5 system-ui, sans-serif; padding: 18px; }
+    video { width: 100%; max-width: 720px; background: #000; border-radius: 8px; display: block; margin: 12px 0; }
+    select, button, input { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 7px; padding: 8px 10px; font: inherit; }
+    button.go { background: #238636; border-color: #238636; }
+    #status { margin-left: 8px; color: #8b949e; }
+    code { background: #161b22; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h2 style="margin:0 0 6px">Laptop webcam → OR monitor</h2>
+  <div style="color:#8b949e;max-width:720px">Publishes this computer's USB webcam to MediaMTX over WebRTC (WHIP) as path <code id="path">cam</code>.
+    MediaMTX must be running on the same machine as the server (<code>npm run mediamtx</code>). Keep this tab open.</div>
+  <video id="preview" autoplay muted playsinline></video>
+  <div>
+    <select id="cam"></select>
+    <select id="res"><option value="1280x720" selected>1280×720</option><option value="1920x1080">1920×1080</option><option value="640x480">640×480</option></select>
+    <select id="fps"><option>30</option><option>60</option></select>
+    <button id="go" class="go">Start sending</button>
+    <button id="stop">Stop</button>
+    <span id="status">idle</span>
+  </div>
+  <script src="./vendor/publisher.js"></script>
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const cfg = await fetch('./api/config').then((r) => r.json()).catch(() => ({ whip: '/mediamtx/cam/whip', cameraPath: 'cam' }));
+    $('path').textContent = cfg.cameraPath;
+    let stream = null, pub = null;
+    async function listCams() {
+      const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+      $('cam').innerHTML = devs.map((d, i) => `<option value="${d.deviceId}">${d.label || 'Camera ' + (i + 1)}</option>`).join('');
+    }
+    async function preview() {
+      stream?.getTracks().forEach((t) => t.stop());
+      const [w, h] = $('res').value.split('x').map(Number);
+      stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: $('cam').value ? { exact: $('cam').value } : undefined, width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: +$('fps').value } }, audio: false });
+      $('preview').srcObject = stream;
+      await listCams();
+    }
+    $('go').onclick = async () => {
+      try {
+        await preview();
+        pub?.close();
+        $('status').textContent = 'connecting…';
+        pub = new MediaMTXWebRTCPublisher({
+          url: new URL(cfg.whip, location.href).toString(), stream,
+          videoCodec: 'h264/90000', videoBitrate: 4000, audioCodec: 'opus/48000', audioBitrate: 32, audioVoice: true,
+          onError: (e) => ($('status').textContent = `error: ${e}`),
+          onConnected: () => ($('status').textContent = '● sending — the headset monitor switches to LIVE'),
+        });
+      } catch (e) { $('status').textContent = `camera error: ${e.message}`; }
+    };
+    $('stop').onclick = () => { pub?.close(); pub = null; stream?.getTracks().forEach((t) => t.stop()); $('status').textContent = 'stopped'; };
+    $('cam').onchange = () => pub && $('go').onclick();
+    listCams();
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+bin/
+.certs/
+test-results/
+artifacts/
+*.log
+.DS_Store
+auto.crt
+auto.key
+client/public/_dev/
