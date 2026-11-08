@@ -1,0 +1,163 @@
+# live-restyle configuration. Hot-reload with: curl -X POST http://<gpu>:8090/config/reload
+engine: gemini               # gemini | openai | edit (open model on GPU, every frame) | hybrid | passthrough
+
+# Google Gemini image edit ("Nano Banana 2" family). Picture 1 = live frame, picture 2 = approved style.
+gemini:
+  model: gemini-3.1-flash-image     # Nano Banana 2 (verified in ListModels) | gemini-3.1-flash-lite-image | gemini-3-pro-image
+  image_size: 1K                    # 1K | 2K | 4K (512 only on gemini-3.1-flash-image)
+  aspect_ratio: "16:9"
+  thinking_level: minimal           # 2.1: minimal|medium|high ; 3.1 flash: minimal|high
+  temperature: null
+  seed: null
+  input_max_side: 1280
+  concurrency: 1                    # staggered requests in flight; ~$0.07 and ~10-19 s each at 1K, so 1 ≈ $15-25/hr
+  expected_s: 14
+  min_interval_s: 0
+  use_previous: false               # also send the last output as picture 3 for continuity
+  previous_prompt: >-
+    Picture 3 is the previous frame of this same video; keep the tissue colours, textures, vessels and lighting
+    consistent with it, but follow picture 1 for every object's position and shape.
+  paused: false
+  reference: null                  # refs/target_style.png makes it copy the reference layout; keep null
+  prompt: >-
+    Edit this training-box camera image into photorealistic laparoscopic gallbladder surgery. Replace ALL blue paper, blue sponge, blue fabric and blue tape beneath and around the green bag with a continuous broad surface of dark reddish-brown liver tissue. That entire blue region is the LIVER: smooth rounded organic lobes, wet glossy surface, fine vessels, no blue remaining, no paper edges, no fabric, no surgical drape. Transform the green plastic bag into ONE anatomically realistic gallbladder attached to the liver: a soft rounded pear-shaped sac with a bulbous fundus and gently tapering neck, muted grey-green translucent serosa, delicate branching red capillaries, subtle uneven tissue texture, tiny yellow fatty attachments near its neck, and a thin moist reflective film. Its surface is living tissue with fine natural wrinkles and soft irregular highlights, never polished plastic. Completely remove the bag's straight sealed seam, triangular corners, folded plastic edges and uniform shiny green surface. Keep the organ centered at the bag's exact position with the same overall size and orientation; round its corners into natural soft anatomy. The liver is underneath the gallbladder, not a separate organ added on top of it. Replace orange and transparent tubing with pale pink ducts and small vessels. Convert the two black sticks into black laparoscopic graspers with metal tips at exactly the same positions, angles and tip locations. Preserve instrument geometry and camera composition. Surround the organs with dark moist abdominal tissue and some yellow fat; conceal the cardboard box and all training materials. Real endoscope lighting, wet highlights, dark vignette. No text, labels or overlays.
+
+openai:
+  model: gpt-image-2.5-flare        # gpt-image-2.6-flare | gpt-image-2.6-sunburst | gpt-image-2.5-sunburst | gpt-image-1.5 ...
+  quality: high                     # low | medium | high (| xhigh | max on 2.5)
+  size: 1536x864                    # 16:9, multiples of 16
+  input_max_side: 1536
+  output_compression: 92
+  # input_fidelity: high            # only gpt-image-1.5 / 1-mini; do not send for 2.x
+  # complexity: low                 # 2.6: low = focused edit, fewer unwanted changes
+  concurrency: 1                    # requests in flight (staggered); cost scales linearly
+  expected_s: 20
+  min_interval_s: 0
+  use_previous: false
+  previous_prompt: >-
+    Image 3 is the previous frame of this same video; keep the tissue colours, textures, vessels and lighting
+    consistent with it, but follow image 1 for every object's position and shape.
+  paused: false
+  reference: refs/target_style.png
+  prompt: >-
+    Repaint image 1 so it looks exactly like the surgical style, lighting, tissue colours and textures of image 2,
+    keeping every object of image 1 in the same position, shape and angle.
+  pricing: {text_in: 5.0, image_in: 8.0, image_out: 30.0}   # USD per 1M tokens
+
+prompt:
+  positive: >-
+    laparoscopic cholecystectomy, real intraoperative endoscope footage, glistening dark red-brown liver,
+    glossy grey-green gallbladder with fine red vessels, pale pink-white cystic duct, yellow lobulated fat
+    in Calot's triangle, black 5 mm laparoscopic graspers with metal jaws, wet tissue, specular highlights,
+    endoscope ring light, dark vignette, high detail, 4k surgical video
+  negative: >-
+    cartoon, painting, illustration, plastic, cardboard, sponge, plastic bag, chopsticks, wood, text, watermark,
+    blurry, lowres, deformed
+
+output:
+  width: 1024
+  height: 576
+  jpeg_quality: 88
+  crossfade_s: 1.5           # slow engines: hold last good frame, crossfade to the next
+  crossfade_fps: 15
+  rtsp: null                 # e.g. rtsp://127.0.0.1:8554/restyled  (MediaMTX → WHEP http://<gpu>:8889/restyled/whep)
+  rtsp_fps: 15
+  rtsp_bitrate: 4M
+
+post:
+  enabled: true
+  gamma: 1.08
+  gain_bgr: [0.96, 0.98, 1.04]
+  bloom: 0.25
+  vignette: 0.9
+  vignette_radius: 0.55
+  vignette_softness: 0.7
+
+events:
+  bleed:
+    x: 0.48                  # default source point (0..1); events may pass x/y
+    y: 0.62
+    instruction: "Add {severity} active bleeding{where}: bright red fresh blood oozing from a small vessel and pooling over the tissue, as in a real laparoscopic bleed."
+    prompt: active bleeding, bright red blood pooling and oozing over the tissue, fresh blood
+    prompt_light: small amount of fresh red blood oozing
+    color_bgr: [18, 10, 125]
+    opacity: 0.92
+    growth: 0.10
+    max_radius: 0.20
+    sag: 0.8
+    pulse_hz: 1.2
+    spurt_angle_deg: -35
+  bile_leak:
+    x: 0.5
+    y: 0.45
+    instruction: "Add a {severity} bile leak{where}: green-yellow bile spilling from a small hole in the gallbladder wall and running over the tissue."
+    prompt: bile leaking from the gallbladder, green-yellow bile fluid spilling over the tissue
+    color_bgr: [30, 150, 150]
+    opacity: 0.8
+    growth: 0.08
+    max_radius: 0.18
+    sag: 0.8
+  smoke:
+    x: 0.5
+    y: 0.55
+    instruction: "Add {severity} white surgical smoke from electrocautery hazing the view{where}."
+    prompt: surgical smoke from electrocautery, hazy white smoke plume
+    density: 0.75
+    color_bgr: [200, 205, 210]
+
+# Heavy two-image edit model (picture 1 = live frame for structure, picture 2 = approved style reference)
+edit:
+  model: Qwen/Qwen-Image-Edit-2511
+  lightning: true
+  steps: 4
+  true_cfg: 1.0
+  width: 1024
+  height: 576
+  seed: 7
+  reference: refs/target_style.png
+  prompt: >-
+    Picture 1 is a photo taken inside a surgical training box. Picture 2 is a frame of real laparoscopic
+    cholecystectomy video. Redraw picture 1 as real laparoscopic surgery footage with exactly the colours,
+    lighting, wet glossy tissue and endoscope look of picture 2, while keeping the composition, camera angle
+    and the position, shape, size and outline of every object in picture 1 exactly the same.
+    The clear plastic bag becomes the glossy grey-green gallbladder covered in fine red blood vessels,
+    keeping its seam as a thin fold line. The blue paper becomes glistening dark red-brown liver.
+    The beige floor becomes yellow lobulated fat. The orange tube becomes a pink cystic duct with tiny vessels.
+    The clear plastic tube becomes a pale pinkish-white bile duct. The black sticks become black 5 mm
+    laparoscopic graspers with metal jaws at their tips. Endoscope ring light with dark vignette at the edges.
+    No plastic, paper, cardboard or text.
+
+instruments:                 # dark low-saturation sticks touching the frame border
+  hsv: [[0, 180, 0, 110, 0, 70]]
+  min_area_frac: 0.004
+  tip_frac: 0.14
+  dilate_px: 2
+
+hybrid:
+  max_batch: 4
+  keyframes: true
+  flow: raft_large           # raft_large | raft_small
+  flow_width: 512
+  flow_iters: 12
+  lut_bins: 33
+  valid_thr: 0.06            # photometric threshold for trusting the keyframe warp
+  instrument:
+    shaft_rgb: [0.07, 0.075, 0.08]
+    tip_rgb: [0.62, 0.62, 0.64]
+  refine:
+    enabled: true
+    model: sdxl_lightning    # sdxl_lightning | sdxl_turbo | sd_turbo
+    lightning_steps: 4
+    strength: 0.35
+    seed: 1234
+    tiny_vae: false
+    compile: false
+    keep_keyframe: 0.5
+  temporal:
+    blend: 0.6
+    valid_thr: 0.04
+  refresh:
+    invalid_frac: 0.3
+    patience: 10
+    min_interval_s: 5
+    period_s: 0

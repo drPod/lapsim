@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+numpy
+opencv-python-headless
+pyyaml
+websockets
+pillow
+# GPU backends
+git+https://github.com/huggingface/diffusers
+transformers
+accelerate
+peft
+safetensors
+sentencepiece
+huggingface_hub

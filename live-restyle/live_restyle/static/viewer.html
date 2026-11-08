@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>live-restyle</title>
+<style>
+  body { margin: 0; background: #111; color: #ddd; font: 14px/1.4 system-ui, sans-serif; }
+  header { padding: 8px 12px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 6px; }
+  .pane { position: relative; background: #000; }
+  .pane img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: contain; }
+  .label { position: absolute; left: 8px; top: 6px; background: #0009; padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+  button { background: #333; color: #eee; border: 1px solid #555; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  button:hover { background: #444; }
+  .stats { font-variant-numeric: tabular-nums; color: #9c9; }
+  input[type=range] { width: 100px; vertical-align: middle; }
+  code { color: #fc9; }
+</style>
+</head>
+<body>
+<header>
+  <strong>live-restyle</strong>
+  <span class="stats" id="stats">connecting…</span>
+  <span>
+    severity <input id="sev" type="range" min="0.1" max="1" step="0.05" value="0.7"> <span id="sevv">0.7</span>
+    <button data-ev="bleed">bleed</button>
+    <button data-ev="smoke">smoke</button>
+    <button data-ev="bile_leak">bile leak</button>
+    <button data-ev="clear">clear</button>
+  </span>
+  <span id="evs"></span>
+</header>
+<div class="panes">
+  <div class="pane"><img id="raw"><div class="label" id="rawl">raw</div></div>
+  <div class="pane"><img id="out"><div class="label" id="outl">restyled</div></div>
+</div>
+<p style="padding:0 12px;color:#888">
+  Output endpoints: <code>/frame/result.jpg</code> + <code>/ws/notify</code> (finished frames) · <code>/stream/out.mjpg</code> (MJPEG) · <code>/ws/stream?which=out</code> (WS JPEG) ·
+  <code>/frame/out.jpg</code> · WHEP <code>http://&lt;gpu&gt;:8889/restyled/whep</code> (if MediaMTX is running) ·
+  events <code>POST /events {"type":"bleed","severity":0.7}</code>
+</p>
+<script>
+const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+function stream(which, imgEl, labelEl) {
+  let times = [], lastUrl = null;
+  function connect() {
+    const ws = new WebSocket(`${proto}://${location.host}/ws/stream?which=${which}`);
+    ws.binaryType = 'arraybuffer';
+    ws.onmessage = (m) => {
+      const dv = new DataView(m.data);
+      const n = dv.getUint32(0, true);
+      const hdr = JSON.parse(new TextDecoder().decode(new Uint8Array(m.data, 4, n)));
+      const blob = new Blob([new Uint8Array(m.data, 4 + n)], {type: 'image/jpeg'});
+      const url = URL.createObjectURL(blob);
+      imgEl.src = url;
+      if (lastUrl) URL.revokeObjectURL(lastUrl);
+      lastUrl = url;
+      const now = performance.now();
+      times.push(now); while (times.length && now - times[0] > 2000) times.shift();
+      const fps = times.length > 1 ? (times.length - 1) * 1000 / (now - times[0]) : 0;
+      // capture→display uses the Pi clock vs browser clock (both NTP-synced; approximate)
+      const lat = Date.now() - hdr.t_cap * 1000;
+      if (hdr.gen !== undefined) { labelEl.textContent = `${which} · frame #${hdr.gen} · captured ${(lat/1000).toFixed(1)} s ago` + (hdr.gen_s ? ` · took ${hdr.gen_s} s` : ''); return; }
+      labelEl.textContent = `${which} · ${fps.toFixed(1)} fps · capture→screen ≈ ${lat.toFixed(0)} ms`;
+    };
+    ws.onclose = () => setTimeout(connect, 1000);
+  }
+  connect();
+}
+stream('raw', document.getElementById('raw'), document.getElementById('rawl'));
+stream('out', document.getElementById('out'), document.getElementById('outl'));
+
+const sev = document.getElementById('sev');
+sev.oninput = () => document.getElementById('sevv').textContent = sev.value;
+for (const b of document.querySelectorAll('button[data-ev]')) {
+  b.onclick = async () => {
+    const type = b.dataset.ev;
+    const body = type === 'clear' ? {type} : {type, severity: parseFloat(sev.value)};
+    await fetch('/events', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  };
+}
+async function poll() {
+  try {
+    const s = await (await fetch('/stats')).json();
+    document.getElementById('stats').textContent =
+      `engine ${s.engine}${s.engine_ready ? '' : ' (loading)'}${s.engine_error ? ' ERROR ' + s.engine_error : ''} · in ${s.in_fps} fps · out ${s.out_fps} fps · engine ${s.engine_ms} ms/batch · capture→out ${s.glass_to_out_ms} ms`;
+    const es = s.engine_stats;
+    if (es && es.requests !== undefined) {
+      document.getElementById('stats').textContent += ` · gen ${es.last_s ?? '–'} s (avg ${es.avg_s ?? '–'}) · $${es.last_cost_usd ?? '–'}/frame · total $${es.total_cost_usd} · ${es.ok}/${es.requests} ok, ${es.in_flight} in flight${es.last_error ? ' · last error: ' + es.last_error : ''}`;
+    }
+    document.getElementById('evs').textContent = s.events.map(e => `${e.type}:${e.level}`).join(' ');
+  } catch (e) {}
+  setTimeout(poll, 1000);
+}
+poll();
+</script>
+</body>
+</html>
