@@ -87,14 +87,15 @@ gemini:
     green surface. Keep the organ centered at the bag''s exact position with the same overall
     size and orientation; round its corners into natural soft anatomy. The liver is underneath
     the gallbladder, not a separate organ added on top of it. Replace orange and transparent
-    tubing with pale pink ducts and small vessels. Show EXACTLY ONE surgical instrument in the
-    whole image: the black stick entering from the upper-left becomes a single black laparoscopic
-    grasper with a metal tip at exactly the same position, angle and tip location. Every other
-    black stick, rod or chopstick is removed completely and replaced by the tissue behind it.
-    Do not add any other instruments, rods or tools anywhere. Preserve that one instrument''s
-    geometry and camera composition. Surround the organs with dark moist abdominal tissue and
-    some yellow fat; conceal the cardboard box and all training materials. Real endoscope lighting,
-    wet highlights, dark vignette. No text, labels or overlays.'
+    tubing with pale pink ducts and small vessels. Show EXACTLY TWO surgical instruments in
+    the whole image, no more and no fewer: the black stick entering from the upper-left and
+    the black stick entering from the right each become one black laparoscopic grasper with
+    a metal tip at exactly the same position, angle and tip location. Any other black stick,
+    rod or chopstick is removed completely and replaced by the tissue behind it. Tubes stay
+    pink ducts, never instruments. Do not add any other instruments, rods or tools anywhere.
+    Preserve both instruments'' geometry and camera composition. Surround the organs with dark
+    moist abdominal tissue and some yellow fat; conceal the cardboard box and all training materials.
+    Real endoscope lighting, wet highlights, dark vignette. No text, labels or overlays.'
   reference: null
   seed: null
   temperature: null
