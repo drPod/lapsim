@@ -41,8 +41,11 @@ class GeminiEditEngine(SlowEditEngine):
         model = o.get("model", "gemini-3.1-flash-image")
         parts = [{"text": prompt},
                  {"inline_data": {"mime_type": "image/jpeg",
-                                  "data": base64.b64encode(encode_jpeg(self.fit(frame_bgr), 92)).decode()}},
-                 {"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(self.reference_jpeg()).decode()}}]
+                                  "data": base64.b64encode(encode_jpeg(self.fit(frame_bgr), 92)).decode()}}]
+        # A style reference image makes the model copy its layout (instruments stop following the
+        # real sticks), so it is off by default (reference: null) and the look is described in text.
+        if o.get("reference"):
+            parts.append({"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(self.reference_jpeg()).decode()}})
         if prev_bgr is not None:
             parts.append({"inline_data": {"mime_type": "image/jpeg",
                                           "data": base64.b64encode(encode_jpeg(self.fit(prev_bgr), 88)).decode()}})
