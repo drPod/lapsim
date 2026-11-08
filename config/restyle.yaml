@@ -1,0 +1,58 @@
+# live-restyle configuration. Hot-reload with: curl -X POST http://<gpu>:8090/config/reload
+engine: passthrough          # passthrough | colormap | hybrid
+
+prompt:
+  positive: >-
+    laparoscopic cholecystectomy, real intraoperative endoscope footage, glistening dark red-brown liver,
+    glossy grey-green gallbladder with fine red vessels, pale pink-white cystic duct, yellow lobulated fat
+    in Calot's triangle, black 5 mm laparoscopic graspers with metal jaws, wet tissue, specular highlights,
+    endoscope ring light, dark vignette, high detail, 4k surgical video
+  negative: >-
+    cartoon, painting, illustration, plastic, cardboard, sponge, plastic bag, chopsticks, wood, text, watermark,
+    blurry, lowres, deformed
+
+output:
+  width: 1024
+  height: 576
+  jpeg_quality: 85
+  rtsp: null                 # e.g. rtsp://127.0.0.1:8554/restyled  (MediaMTX → WHEP http://<gpu>:8889/restyled/whep)
+  rtsp_fps: 15
+  rtsp_bitrate: 4M
+
+post:
+  enabled: true
+  gamma: 1.08
+  gain_bgr: [0.96, 0.98, 1.04]
+  bloom: 0.25
+  vignette: 0.9
+  vignette_radius: 0.55
+  vignette_softness: 0.7
+
+events:
+  bleed:
+    x: 0.48                  # default source point (0..1); events may pass x/y
+    y: 0.62
+    prompt: active bleeding, bright red blood pooling and oozing over the tissue, fresh blood
+    prompt_light: small amount of fresh red blood oozing
+    color_bgr: [18, 10, 125]
+    opacity: 0.92
+    growth: 0.10
+    max_radius: 0.20
+    sag: 0.8
+    pulse_hz: 1.2
+    spurt_angle_deg: -35
+  bile_leak:
+    x: 0.5
+    y: 0.45
+    prompt: bile leaking from the gallbladder, green-yellow bile fluid spilling over the tissue
+    color_bgr: [30, 150, 150]
+    opacity: 0.8
+    growth: 0.08
+    max_radius: 0.18
+    sag: 0.8
+  smoke:
+    x: 0.5
+    y: 0.55
+    prompt: surgical smoke from electrocautery, hazy white smoke plume
+    density: 0.75
+    color_bgr: [200, 205, 210]
