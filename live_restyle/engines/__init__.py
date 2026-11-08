@@ -6,9 +6,9 @@ def load_engine(name: str, cfg: dict):
     if name == "passthrough":
         from .passthrough import Passthrough
         return Passthrough(cfg)
-    if name == "colormap":
-        from .colormap import ColorMapEngine
-        return ColorMapEngine(cfg)
+    if name == "edit":
+        from .edit import EditEngine
+        return EditEngine(cfg)
     if name == "hybrid":
         from .hybrid import HybridEngine
         return HybridEngine(cfg)

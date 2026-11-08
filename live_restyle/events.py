@@ -132,29 +132,32 @@ class EventState:
         return ", ".join(pos), ", ".join(neg)
 
     # ------------------------------------------------------- conditioning
-    def paint_guide(self, img: np.ndarray, now: float | None = None) -> tuple[np.ndarray, np.ndarray]:
-        """Paint fluid events into the guide image (BGR uint8, pre-diffusion).
-
-        Returns (painted image, float mask 0..1 of changed area)."""
+    def fluid_layers(self, h: int, w: int, now: float | None = None) -> list[tuple[np.ndarray, tuple, float, int]]:
+        """[(mask float32 HxW 0..1, colour BGR, opacity, seed)] for blood/bile events."""
         now = time.time() if now is None else now
-        h, w = img.shape[:2]
-        out = img.astype(np.float32)
-        mask_total = np.zeros((h, w), np.float32)
+        out = []
         for ev, lvl in self.active(now):
             if ev.type not in ("bleed", "bile_leak"):
                 continue
             c = self.cfg.get(ev.type, {})
-            m = self._fluid_mask(ev, lvl, now, h, w)
-            col = np.array(c.get("color_bgr", (18, 12, 120) if ev.type == "bleed" else (40, 150, 160)), np.float32)
-            opacity = float(c.get("opacity", 0.9))
+            col = tuple(c.get("color_bgr", (18, 12, 120) if ev.type == "bleed" else (40, 150, 160)))
+            out.append((self._fluid_mask(ev, lvl, now, h, w), col, float(c.get("opacity", 0.9)), ev.seed))
+        return out
+
+    def paint_guide(self, img: np.ndarray, now: float | None = None) -> tuple[np.ndarray, np.ndarray]:
+        """Paint fluid events into the guide image (BGR uint8, pre-diffusion).
+
+        Returns (painted image, float mask 0..1 of changed area)."""
+        h, w = img.shape[:2]
+        out = img.astype(np.float32)
+        mask_total = np.zeros((h, w), np.float32)
+        lum = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)[..., None] / 255.0
+        for m, col, opacity, seed in self.fluid_layers(h, w, now):
             # keep some underlying luminance so the diffusion pass sees shape
-            lum = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)[..., None] / 255.0
-            fluid = col[None, None, :] * (0.55 + 0.6 * lum)
-            # specular glints on the fluid
-            spec = (_noise(h, w, ev.seed + 7, 6) > 0.86).astype(np.float32) * m
+            fluid = np.array(col, np.float32)[None, None, :] * (0.55 + 0.6 * lum)
+            spec = (_noise(h, w, seed + 7, 6) > 0.93).astype(np.float32) * m
             a = (m * opacity)[..., None]
-            out = out * (1 - a) + fluid * a
-            out = out + spec[..., None] * 120
+            out = out * (1 - a) + fluid * a + spec[..., None] * 90
             mask_total = np.maximum(mask_total, m)
         return out.clip(0, 255).astype(np.uint8), mask_total
 

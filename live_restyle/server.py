@@ -108,6 +108,8 @@ class Service:
                 continue
             # newest frames, at most max_batch, oldest first
             batch = items[-self.engine.max_batch:]
+            if self.engine.max_batch == 1:
+                batch = items[-1:]
             t0 = time.time()
             try:
                 outs = self.engine.process(batch, self.events)
