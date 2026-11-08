@@ -35,7 +35,7 @@
   <div class="pane"><img id="out"><div class="label" id="outl">restyled</div></div>
 </div>
 <p style="padding:0 12px;color:#888">
-  Output endpoints: <code>/stream/out.mjpg</code> (MJPEG) · <code>/ws/stream?which=out</code> (WS JPEG) ·
+  Output endpoints: <code>/frame/result.jpg</code> + <code>/ws/notify</code> (finished frames) · <code>/stream/out.mjpg</code> (MJPEG) · <code>/ws/stream?which=out</code> (WS JPEG) ·
   <code>/frame/out.jpg</code> · WHEP <code>http://&lt;gpu&gt;:8889/restyled/whep</code> (if MediaMTX is running) ·
   events <code>POST /events {"type":"bleed","severity":0.7}</code>
 </p>
@@ -60,6 +60,7 @@ function stream(which, imgEl, labelEl) {
       const fps = times.length > 1 ? (times.length - 1) * 1000 / (now - times[0]) : 0;
       // capture→display uses the Pi clock vs browser clock (both NTP-synced; approximate)
       const lat = Date.now() - hdr.t_cap * 1000;
+      if (hdr.gen !== undefined) { labelEl.textContent = `${which} · frame #${hdr.gen} · captured ${(lat/1000).toFixed(1)} s ago` + (hdr.gen_s ? ` · took ${hdr.gen_s} s` : ''); return; }
       labelEl.textContent = `${which} · ${fps.toFixed(1)} fps · capture→screen ≈ ${lat.toFixed(0)} ms`;
     };
     ws.onclose = () => setTimeout(connect, 1000);
@@ -83,6 +84,10 @@ async function poll() {
     const s = await (await fetch('/stats')).json();
     document.getElementById('stats').textContent =
       `engine ${s.engine}${s.engine_ready ? '' : ' (loading)'}${s.engine_error ? ' ERROR ' + s.engine_error : ''} · in ${s.in_fps} fps · out ${s.out_fps} fps · engine ${s.engine_ms} ms/batch · capture→out ${s.glass_to_out_ms} ms`;
+    const es = s.engine_stats;
+    if (es && es.requests !== undefined) {
+      document.getElementById('stats').textContent += ` · gen ${es.last_s ?? '–'} s (avg ${es.avg_s ?? '–'}) · $${es.last_cost_usd ?? '–'}/frame · total $${es.total_cost_usd} · ${es.ok}/${es.requests} ok, ${es.in_flight} in flight${es.last_error ? ' · last error: ' + es.last_error : ''}`;
+    }
     document.getElementById('evs').textContent = s.events.map(e => `${e.type}:${e.level}`).join(' ');
   } catch (e) {}
   setTimeout(poll, 1000);

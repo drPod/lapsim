@@ -1,5 +1,24 @@
 # live-restyle configuration. Hot-reload with: curl -X POST http://<gpu>:8090/config/reload
-engine: hybrid               # passthrough | hybrid | edit (heavy model every frame)
+engine: openai               # openai | edit (open model on GPU, every frame) | hybrid | passthrough
+
+# OpenAI Images edit backend (picture 1 = live frame, picture 2 = approved style reference)
+openai:
+  model: gpt-image-2.5-flare        # gpt-image-2.6-flare | gpt-image-2.6-sunburst | gpt-image-2.5-sunburst | gpt-image-1.5 ...
+  quality: high                     # low | medium | high (| xhigh | max on 2.5)
+  size: 1536x864                    # 16:9, multiples of 16
+  input_max_side: 1536
+  output_compression: 92
+  # input_fidelity: high            # only gpt-image-1.5 / 1-mini; do not send for 2.x
+  # complexity: low                 # 2.6: low = focused edit, fewer unwanted changes
+  concurrency: 1                    # requests in flight (staggered); cost scales linearly
+  expected_s: 20
+  min_interval_s: 0
+  paused: false
+  reference: refs/target_style.png
+  prompt: >-
+    Repaint image 1 so it looks exactly like the surgical style, lighting, tissue colours and textures of image 2,
+    keeping every object of image 1 in the same position, shape and angle.
+  pricing: {text_in: 5.0, image_in: 8.0, image_out: 30.0}   # USD per 1M tokens
 
 prompt:
   positive: >-
@@ -14,7 +33,9 @@ prompt:
 output:
   width: 1024
   height: 576
-  jpeg_quality: 85
+  jpeg_quality: 88
+  crossfade_s: 1.5           # slow engines: hold last good frame, crossfade to the next
+  crossfade_fps: 15
   rtsp: null                 # e.g. rtsp://127.0.0.1:8554/restyled  (MediaMTX → WHEP http://<gpu>:8889/restyled/whep)
   rtsp_fps: 15
   rtsp_bitrate: 4M
@@ -32,6 +53,7 @@ events:
   bleed:
     x: 0.48                  # default source point (0..1); events may pass x/y
     y: 0.62
+    instruction: "Add {severity} active bleeding{where}: bright red fresh blood oozing from a small vessel and pooling over the tissue, as in a real laparoscopic bleed."
     prompt: active bleeding, bright red blood pooling and oozing over the tissue, fresh blood
     prompt_light: small amount of fresh red blood oozing
     color_bgr: [18, 10, 125]
@@ -44,6 +66,7 @@ events:
   bile_leak:
     x: 0.5
     y: 0.45
+    instruction: "Add a {severity} bile leak{where}: green-yellow bile spilling from a small hole in the gallbladder wall and running over the tissue."
     prompt: bile leaking from the gallbladder, green-yellow bile fluid spilling over the tissue
     color_bgr: [30, 150, 150]
     opacity: 0.8
@@ -53,6 +76,7 @@ events:
   smoke:
     x: 0.5
     y: 0.55
+    instruction: "Add {severity} white surgical smoke from electrocautery hazing the view{where}."
     prompt: surgical smoke from electrocautery, hazy white smoke plume
     density: 0.75
     color_bgr: [200, 205, 210]

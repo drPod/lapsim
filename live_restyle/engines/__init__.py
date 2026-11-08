@@ -6,6 +6,9 @@ def load_engine(name: str, cfg: dict):
     if name == "passthrough":
         from .passthrough import Passthrough
         return Passthrough(cfg)
+    if name == "openai":
+        from .openai_edit import OpenAIEditEngine
+        return OpenAIEditEngine(cfg)
     if name == "edit":
         from .edit import EditEngine
         return EditEngine(cfg)

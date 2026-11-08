@@ -51,6 +51,12 @@ class Service:
         self.engine_error = None
         self.running = True
         self.started = time.time()
+        self._present_lock = threading.Lock()
+        self._shown_t_cap = 0.0
+        self.gen_seq = 0
+        self.last_result = None
+        self.result_frame = None
+        self.results = FrameHub(history=4)   # finished frames only (no crossfade intermediates)
         self._play: list = []
         self._play_tail = 0.0
         self._play_cond = threading.Condition()
@@ -99,6 +105,9 @@ class Service:
         except Exception as e:  # keep serving raw so problems are visible
             log.exception("engine load failed")
             self.engine_error = repr(e)
+            return
+        if hasattr(self.engine, "run"):   # engines that drive themselves (e.g. OpenAI workers)
+            self.engine.run(self)
             return
         ver = 0
         while self.running:
@@ -150,6 +159,43 @@ class Service:
             self.lat["glass_to_out_ms"] = 0.8 * self.lat["glass_to_out_ms"] + 0.2 * (now - f.t_cap) * 1000
             self.out.publish(o)
 
+    def present(self, f: Frame, img: np.ndarray, meta: dict | None = None) -> None:
+        """Publish a slow-engine result: hold the last good frame, crossfade to the new one."""
+        with self._present_lock:
+            if f.t_cap < self._shown_t_cap:
+                return  # an older request finished after a newer one; drop it
+            self._shown_t_cap = f.t_cap
+            self.gen_seq += 1
+            gen = self.gen_seq
+            prev, _ = self.out.latest()
+        o = self.cfg.get("output", {})
+        W, H = int(o.get("width", 1024)), int(o.get("height", 576))
+        if img.shape[:2] != (H, W):
+            img = cv2.resize(img, (W, H), interpolation=cv2.INTER_AREA)
+        now = time.time()
+        self.out_rate.tick(now)
+        self.lat["glass_to_out_ms"] = (now - f.t_cap) * 1000
+        info = {"gen": gen, "seq": f.seq, "t_cap": f.t_cap, "t_out": now, **(meta or {})}
+        self.last_result = info
+        self.result_frame = Frame(f.seq, img, f.t_cap, f.t_recv, meta={"t_out": now, **info})
+        self.results.publish(self.result_frame)
+        xf = float(o.get("crossfade_s", 1.5))
+        fps = float(o.get("crossfade_fps", 15))
+        if prev is None or xf <= 0 or prev.img.shape != img.shape:
+            self.out.publish(Frame(f.seq, img, f.t_cap, f.t_recv, meta={"t_out": now, **info}))
+            return
+        a_img = prev.img.astype(np.float32)
+        b_img = img.astype(np.float32)
+        n = max(1, int(xf * fps))
+        for i in range(1, n + 1):
+            if self.gen_seq != gen:
+                return  # a newer result took over
+            a = i / n
+            a = a * a * (3 - 2 * a)  # smoothstep
+            mix = (a_img * (1 - a) + b_img * a).astype(np.uint8) if i < n else img
+            self.out.publish(Frame(f.seq, mix, f.t_cap, f.t_recv, meta={"t_out": time.time(), **info}))
+            time.sleep(1 / fps)
+
     def stats(self) -> dict:
         return {
             "engine": self.engine_name,
@@ -159,6 +205,8 @@ class Service:
             "out_fps": round(self.out_rate.fps, 1),
             **{k: round(v, 1) for k, v in self.lat.items()},
             "events": self.events.snapshot()["events"],
+            "engine_stats": getattr(self.engine, "stats", None),
+            "last_result": self.last_result,
             "uptime_s": round(time.time() - self.started),
         }
 
@@ -171,7 +219,7 @@ def build_app(svc: Service) -> FastAPI:
     jpeg_q = int(svc.cfg.get("output", {}).get("jpeg_quality", 85))
 
     def hub(which: str) -> FrameHub:
-        return svc.raw if which == "raw" else svc.out
+        return {"raw": svc.raw, "result": svc.results}.get(which, svc.out)
 
     def frame_jpeg(f: Frame, which: str) -> bytes:
         if which == "raw" and f.jpeg is not None:
@@ -248,8 +296,25 @@ def build_app(svc: Service) -> FastAPI:
                 if f is None:
                     continue
                 hdr = json.dumps({"seq": f.seq, "t_cap": f.t_cap, "t_recv": f.t_recv,
-                                  "t_out": f.meta.get("t_out"), "t_send": time.time()}).encode()
+                                  "t_send": time.time(),
+                                  **{k: v for k, v in f.meta.items() if not k.startswith("_")}}).encode()
                 await ws.send_bytes(struct.pack("<I", len(hdr)) + hdr + frame_jpeg(f, which))
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+
+    @app.websocket("/ws/notify")
+    async def ws_notify(ws: WebSocket):
+        """JSON message for every finished frame (not crossfade steps):
+        {"gen", "seq", "t_cap", "t_out", "gen_s", "cost_usd", "url": "/frame/result.jpg?gen=N"}"""
+        await ws.accept()
+        ver = 0
+        try:
+            while True:
+                f, ver = await asyncio.to_thread(svc.results.wait, ver, 5.0)
+                if f is None:
+                    continue
+                info = {k: v for k, v in f.meta.items() if not k.startswith("_")}
+                await ws.send_json({**info, "url": f"/frame/result.jpg?gen={info.get('gen')}"})
         except (WebSocketDisconnect, RuntimeError):
             pass
 
