@@ -1,0 +1,15 @@
+# Minimal MediaMTX: the restyle server publishes RTSP to /restyled; browsers read WHEP.
+logLevel: warn
+rtsp: yes
+rtspAddress: :8554
+rtmp: no
+hls: yes
+hlsAddress: :8888
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcAdditionalHosts: [100.75.165.4]
+srt: no
+paths:
+  restyled:
+    source: publisher
