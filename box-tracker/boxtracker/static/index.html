@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Box tracker</title>
+<style>
+  :root { --bg:#0e1319; --panel:#17202a; --line:#2a3542; --text:#dfe7ef; --muted:#8a99a8; --ok:#3ddc84; --warn:#ffb020; --bad:#ff5d5d; --acc:#7cc4ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; }
+  header { display:flex; gap:16px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; }
+  .pill { padding:2px 10px; border-radius:99px; background:var(--panel); border:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  main { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:16px; padding:16px; }
+  @media (max-width:1000px) { main { grid-template-columns:1fr; } }
+  #view { position:relative; background:#000; border-radius:8px; overflow:hidden; }
+  #view img { width:100%; display:block; cursor:crosshair; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; }
+  .panel h2 { font-size:13px; margin:0 0 8px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  td, th { padding:3px 4px; text-align:left; border-bottom:1px solid var(--line); font-size:13px; }
+  th { color:var(--muted); font-weight:500; }
+  button { background:#24415e; color:#fff; border:1px solid #35618a; border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; margin:2px 4px 2px 0; }
+  button.sec { background:transparent; border-color:var(--line); color:var(--text); }
+  button:disabled { opacity:.4; cursor:default; }
+  #prompt { font-size:15px; font-weight:600; }
+  #msg { color:var(--acc); margin-top:6px; min-height:1.2em; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .steps { display:flex; gap:4px; margin-bottom:8px; flex-wrap:wrap; }
+  .steps span { font-size:11px; padding:1px 6px; border-radius:4px; background:#1e2935; color:var(--muted); }
+  .steps span.cur { background:var(--acc); color:#000; }
+  input[type=number] { width:64px; background:#0e1319; color:var(--text); border:1px solid var(--line); border-radius:4px; padding:2px 4px; }
+  .keys { color:var(--muted); font-size:12px; }
+  code { color:var(--acc); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Box tracker</h1>
+  <span class="pill" id="fps">-- fps</span>
+  <span class="pill" id="lat">latency --</span>
+  <span class="pill" id="send">sim: --</span>
+  <span class="pill" id="keys">keys: none</span>
+</header>
+<main>
+  <div>
+    <div id="view"><img id="img" src="/stream.mjpg" alt="camera"></div>
+    <p class="keys">Keyboard (this page or a keyboard plugged into the Pi): <b>F</b> energy (cautery) ·
+      <b>Z</b> close the left-hand stick's jaws · <b>M</b> close the right-hand stick's jaws ·
+      <b>X</b> assist jaws · <b>Space</b> close all. Thumb on a stick's top band also closes its jaws.</p>
+  </div>
+  <div>
+    <div class="panel" id="wiz">
+      <h2>Calibration</h2>
+      <div class="steps" id="steps"></div>
+      <div id="prompt">Not calibrating.</div>
+      <div id="msg"></div>
+      <div id="wizbtns" style="margin-top:8px"></div>
+    </div>
+    <div class="panel">
+      <h2>Tools</h2>
+      <table id="tools"><thead><tr><th>Stick</th><th>Status</th><th>Yaw</th><th>Pitch</th><th>Depth</th><th>Jaw</th></tr></thead><tbody></tbody></table>
+      <div id="toolx" class="keys" style="margin-top:6px"></div>
+    </div>
+    <div class="panel">
+      <h2>Simulator link</h2>
+      <div id="link" style="word-break:break-all"></div>
+      <div style="margin-top:6px"><button class="sec" id="btnSend">Pause sending</button></div>
+    </div>
+    <div class="panel">
+      <h2>Sticks</h2>
+      <div id="sticks"></div>
+    </div>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const COL = {blue:'#3b8cff', green:'#2ecc55', red:'#ff4040', pink:'#ff6ad5', orange:'#ff9a2e', purple:'#b05cff'};
+let S = null, sticksBuilt = false;
+async function cmd(d) {
+  const r = await fetch('/api/cmd', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(d)});
+  const j = await r.json(); if (j.state) render(j.state); return j;
+}
+$('#img').addEventListener('click', e => {
+  if (!S || !S.wizard.active) return;
+  const r = e.target.getBoundingClientRect();
+  const x = (e.clientX - r.left) * S.image[0] / r.width, y = (e.clientY - r.top) * S.image[1] / r.height;
+  cmd({cmd:'click', x, y});
+});
+const held = new Set();
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.repeat) return; if (e.code === 'Space') e.preventDefault(); held.add(e.code); cmd({cmd:'key', code:e.code, down:true}); });
+addEventListener('keyup', e => { if (e.target.tagName === 'INPUT') return; held.delete(e.code); cmd({cmd:'key', code:e.code, down:false}); });
+addEventListener('blur', () => { held.clear(); cmd({cmd:'keys_clear'}); });
+$('#btnSend').onclick = () => cmd({cmd:'send_enable', on: !S.send.enabled});
+const deg = r => (r * 180 / Math.PI).toFixed(1) + '°';
+function btn(label, d, cls) { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = () => cmd(d); return b; }
+function render(s) {
+  S = s;
+  $('#fps').textContent = `${s.fps} fps · ${s.proc_ms} ms/frame`;
+  $('#lat').textContent = `capture→pose ${s.capture_latency_ms} ms` + (s.send.latency_ms != null ? ` · →sent ${s.send.latency_ms} ms` : '');
+  const sc = s.send.connected ? 'ok' : 'bad';
+  $('#send').innerHTML = `sim: <span class="${sc}">${s.send.connected ? 'connected' : 'offline'}</span> · ${s.send.rate} msg/s` + (s.send.enabled ? '' : ' <span class="warn">(paused)</span>');
+  $('#keys').textContent = 'keys: ' + (s.keys.join(' ') || 'none');
+  $('#link').innerHTML = `<div>${s.send.url || '(no WebSocket)'}</div>` + (s.send.udp ? `<div>UDP ${s.send.udp}</div>` : '') + (s.send.http ? `<div>HTTP ${s.send.http}</div>` : '') +
+    (s.send.presence ? `<div class="keys">clients: ${Object.entries(s.send.presence).map(([k,v]) => k + ' ' + v).join(' · ')}</div>` : '') +
+    (s.send.error ? `<div class="warn">${s.send.error}</div>` : '');
+  $('#btnSend').textContent = s.send.enabled ? 'Pause sending' : 'Resume sending';
+  const tb = $('#tools tbody'); tb.innerHTML = '';
+  for (const t of s.tools) {
+    const p = t.pose, st = t.status, cls = st === 'tracking' ? 'ok' : st === 'holding' ? 'warn' : 'bad';
+    tb.insertAdjacentHTML('beforeend', `<tr><td><span class="sw" style="background:${COL[t.colour]}"></span>${t.hole} · ${t.id}</td><td class="${cls}">${st}</td>` +
+      `<td>${p ? deg(p.yaw) : ''}</td><td>${p ? deg(p.pitch) : ''}</td><td>${p ? (p.depth * 100).toFixed(1) + ' cm' : ''}</td><td>${p ? (p.jaw ? 'open' : '<b>closed</b>') + (p.energy ? ' ⚡' : '') : ''}</td></tr>`);
+  }
+  $('#toolx').innerHTML = s.tools.map(t => `${t.hole}: fit ${t.rms_px ?? '-'} px, tilt ${t.tilt_deg ?? '-'}°, jaw band ${t.jaw_score ?? '-'}`).join('<br>') +
+    `<br>lid fit ${s.lid_rms_px != null ? s.lid_rms_px.toFixed(1) + ' px' : 'not calibrated'} · lens ${s.intrinsics_calibrated ? 'calibrated' : 'nominal'}`;
+  if (!sticksBuilt) {
+    sticksBuilt = true;
+    $('#sticks').innerHTML = s.tools.map(t => `<div style="margin:4px 0"><span class="sw" style="background:${COL[t.colour]}"></span>${t.colour} stick (hole ${t.hole}, ${t.hand} hand) length <input type="number" step="0.5" min="10" max="60" value="${t.stick_length_cm}" data-tool="${t.id}"> cm</div>`).join('');
+    for (const i of document.querySelectorAll('#sticks input')) i.onchange = () => cmd({cmd:'set_stick_length', tool:i.dataset.tool, cm:+i.value});
+  }
+  const w = s.wizard, wb = $('#wizbtns');
+  $('#steps').innerHTML = w.steps.slice(0, 6).map(x => `<span class="${x === w.step ? 'cur' : ''}">${x}</span>`).join('');
+  $('#prompt').textContent = w.active ? w.prompt : (s.calibrated ? 'Calibrated. Press Calibrate to redo it.' : 'Not calibrated yet. Press Calibrate to start (about 5 minutes).');
+  $('#msg').textContent = w.msg || '';
+  const key = (w.active ? w.step : 'idle') + JSON.stringify(s.tools.map(t => [t.jaw_open_score, t.jaw_closed_score]));
+  if (wb.dataset.key !== key) {
+    wb.dataset.key = key; wb.innerHTML = '';
+    if (!w.active) { wb.append(btn('Calibrate', {cmd:'calib_start'})); if (s.calibrated) { wb.append(btn('Redo colours', {cmd:'calib_start', step:'colours'}, 'sec')); wb.append(btn('Redo jaw', {cmd:'calib_start', step:'jaw'}, 'sec')); } }
+    else {
+      if (w.step === 'focus') wb.append(btn('Focus', {cmd:'focus'}));
+      if (w.step === 'intrinsics') { wb.append(btn('Start', {cmd:'intrinsics_start'})); wb.append(btn('Skip', {cmd:'intrinsics_skip'}, 'sec')); }
+      if (w.step === 'lid' || w.step === 'colours') wb.append(btn('Undo', {cmd:'undo'}, 'sec'));
+      if (['lid', 'colours', 'wiggle'].includes(w.step)) wb.append(btn('Next', {cmd:'next'}));
+      if (w.step === 'jaw') {
+        for (const t of s.tools) {
+          const d = document.createElement('div');
+          d.innerHTML = `<span class="sw" style="background:${COL[t.colour]}"></span>${t.colour}: `;
+          d.append(btn('Open', {cmd:'jaw', tool:t.id, state:'open'}, t.jaw_open_score != null ? 'sec' : ''));
+          d.append(btn('Closed', {cmd:'jaw', tool:t.id, state:'closed'}, t.jaw_closed_score != null ? 'sec' : ''));
+          wb.append(d);
+        }
+        wb.append(btn('Finish', {cmd:'next'}));
+      }
+      wb.append(btn('Cancel', {cmd:'calib_cancel'}, 'sec'));
+    }
+  }
+}
+async function poll() {
+  try { render(await (await fetch('/api/state')).json()); } catch (e) {}
+  setTimeout(poll, 250);
+}
+poll();
+// reconnect the MJPEG stream if it stalls
+setInterval(() => { const i = $('#img'); if (!i.complete || i.naturalWidth === 0) i.src = '/stream.mjpg?' + Date.now(); }, 5000);
+</script>
+</body>
+</html>

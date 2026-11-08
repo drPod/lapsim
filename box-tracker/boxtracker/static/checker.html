@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Checkerboard</title>
+<style>
+  html, body { margin:0; height:100%; background:#fff; overflow:hidden; }
+  canvas { display:block; margin:auto; }
+  p { position:fixed; bottom:4px; width:100%; text-align:center; font:12px system-ui; color:#888; margin:0; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<p>Full brightness. Show this to the camera and slowly tilt and move it around.</p>
+<script>
+// 10 x 7 squares = 9 x 6 inner corners, with a white border (needed by the detector).
+function draw() {
+  const c = document.getElementById('c'), W = innerWidth, H = innerHeight - 20;
+  const landscape = W >= H, nx = landscape ? 10 : 7, ny = landscape ? 7 : 10;
+  const sq = Math.floor(Math.min(W / (nx + 1.5), H / (ny + 1.5)));
+  c.width = sq * (nx + 1.5); c.height = sq * (ny + 1.5);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#000';
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) if ((x + y) % 2 === 0) g.fillRect(sq * 0.75 + x * sq, sq * 0.75 + y * sq, sq, sq);
+}
+addEventListener('resize', draw); draw();
+</script>
+</body>
+</html>

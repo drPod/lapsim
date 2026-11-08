@@ -1,0 +1,15 @@
+# systemd *user* unit (no root needed). Install with ./install.sh
+[Unit]
+Description=Box tracker (laparoscopy trainer camera -> simulator)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=%h/box-tracker
+ExecStart=%h/boxtracker-venv/bin/python -m boxtracker run
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
