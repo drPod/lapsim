@@ -11,6 +11,7 @@ import http from 'node:http';
 import https from 'node:https';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
@@ -215,6 +216,74 @@ if (RESTYLE_URL) {
   };
   connectNotify();
 }
+
+// ---------------------------------------------------------------- dashboard feeds
+// /dashboard.html shows the AI pipeline: raw + restyled video, the director's trace
+// (observations, tool calls, dispatch results) and live GPU telemetry.
+if (RESTYLE_URL) {
+  // passthrough for restyle stats, snapshots and MJPEG streams
+  app.get(/^\/api\/restyle\/(stats|state|frame\/\w+\.jpg|stream\/\w+\.mjpg)$/, async (req, res) => {
+    const ac = new AbortController();
+    req.on('close', () => ac.abort());
+    try {
+      const r = await fetch(`${RESTYLE_URL}/${req.params[0]}`, { signal: ac.signal });
+      res.status(r.status).set({ 'content-type': r.headers.get('content-type') || 'application/octet-stream', 'cache-control': 'no-store' });
+      if (!r.body) return res.end();
+      for await (const chunk of r.body) if (!res.write(chunk)) await new Promise((ok) => res.once('drain', ok));
+      res.end();
+    } catch (e) { if (!res.headersSent) res.status(502).json({ error: e.message }); else res.end(); }
+  });
+}
+
+// Director trace: every JSONL record the director logs is POSTed here and fanned out.
+const traces = [];
+app.post('/api/trace', (req, res) => {
+  const list = Array.isArray(req.body) ? req.body : [req.body];
+  for (const rec of list) {
+    traces.push(rec); if (traces.length > 300) traces.shift();
+    broadcast({ type: 'trace', rec }, (c) => c.role === 'observer' || c.role === 'dashboard');
+  }
+  res.json({ ok: true });
+});
+app.get('/api/trace', (_req, res) => res.json(traces.slice(-120)));
+
+// GPU telemetry: GPU_STATS_CMD runs a loop on the GPU host (e.g. via ssh) that prints
+// nvidia-smi samples; see scripts/gpu-stats.sh. Blocks are separated by a "---" line.
+const gpu = { last: null, history: [] };
+if (process.env.GPU_STATS_CMD) {
+  const start = () => {
+    const p = spawn('sh', ['-c', process.env.GPU_STATS_CMD], { stdio: ['ignore', 'pipe', 'inherit'] });
+    let buf = '', block = [];
+    p.stdout.on('data', (d) => {
+      buf += d; let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (line !== '---') { block.push(line); continue; }
+        const sample = parseGpuBlock(block); block = [];
+        if (!sample) continue;
+        gpu.last = sample; gpu.history.push(sample); if (gpu.history.length > 240) gpu.history.shift();
+        broadcast({ type: 'gpu', sample }, (c) => c.role === 'observer' || c.role === 'dashboard');
+      }
+    });
+    p.on('exit', () => setTimeout(start, 3000));
+  };
+  start();
+}
+function parseGpuBlock(lines) {
+  // line 0: name, util %, mem util %, mem used MiB, mem total MiB, power W, power limit W, temp C, sm clock MHz
+  // then "proc,<pid>,<name>,<MiB>,<cmdline>"
+  const g = (lines[0] || '').split(',').map((x) => x.trim());
+  if (g.length < 9 || Number.isNaN(Number(g[1]))) return null;
+  const procs = lines.slice(1).filter((l) => l.startsWith('proc,')).map((l) => {
+    const [, pid, name, mib, ...cmd] = l.split(',');
+    return { pid: Number(pid), name: name.trim(), memMiB: Number(mib), cmd: cmd.join(',').trim() };
+  });
+  const sm = {};
+  for (const l of lines) if (l.startsWith('pmon,')) { const [, pid, s, m] = l.split(','); sm[pid] = { sm: Number(s) || 0, mem: Number(m) || 0 }; }
+  for (const p of procs) Object.assign(p, sm[p.pid] || { sm: 0, mem: 0 });
+  return { ts: Date.now(), name: g[0], util: +g[1], memUtil: +g[2], memUsed: +g[3], memTotal: +g[4], power: +g[5], powerLimit: +g[6], temp: +g[7], smClock: +g[8], procs };
+}
+app.get('/api/gpu', (_req, res) => res.json(gpu));
 
 // ---------------------------------------------------------------- server
 function tlsOptions() {

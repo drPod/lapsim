@@ -20,7 +20,7 @@ export class FrameStream {
     this.ctx.fillStyle = '#05070a'; this.ctx.fillRect(0, 0, W, H);
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.NoColorSpace; // monitor shader treats video/frames as display-referred
-    this.prev = null; this.next = null; this.fadeT = 1; this.fadeDur = 2.5;
+    this.prev = null; this.next = null; this.fadeT = 1; this.fadeDur = 0.08;
     this.cfg = { url: '', ws: '', pollMs: 15000 };
     this.frames = 0; this.lastFrameAt = 0;
   }

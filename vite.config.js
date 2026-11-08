@@ -33,6 +33,7 @@ export default defineConfig({
         sender: resolve(import.meta.dirname, 'client/sender.html'),
         abdomen: resolve(import.meta.dirname, 'client/abdomen.html'),
         credits: resolve(import.meta.dirname, 'client/credits.html'),
+        dashboard: resolve(import.meta.dirname, 'client/dashboard.html'),
       },
     },
   },
