@@ -37,7 +37,7 @@ class HybridEngine:
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.h = cfg.get("hybrid", {})
-        self.dev = torch.device("cuda")
+        self.dev = torch.device(self.h.get("device", "cuda"))
         o = cfg.get("output", {})
         self.W, self.H = int(o.get("width", 1024)), int(o.get("height", 576))
         self.max_batch = int(self.h.get("max_batch", 4))
