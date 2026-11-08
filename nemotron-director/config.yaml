@@ -1,0 +1,50 @@
+# nemotron-director config. Every key can be overridden with --set a.b=value.
+difficulty: normal          # easy | normal | hard (presets in director/config.py)
+tick_s: 1.0                 # target loop period (a tick takes max(tick_s, inference time))
+
+frames:
+  # Tried in order; the first that answers wins. live-restyle's raw ingest frame exists only while its
+  # Pi sender runs (boxtracker stopped); otherwise the Pi boxtracker's own snapshot is the newest frame.
+  urls:
+    - http://127.0.0.1:8090/frame/raw.jpg
+    - http://100.90.206.75:8080/snapshot.jpg
+  timeout_s: 2.0
+  replay_dir: null          # set to a folder of jpgs to replay offline instead
+
+vlm:
+  base_url: http://127.0.0.1:8001/v1
+  model: nemotron-nano-vl
+  observer_max_tokens: 300
+  director_max_tokens: 400
+  image_width: 768          # frames are downscaled before upload
+  timeout_s: 30
+  use_director_llm: true    # false = rules only (no narrative LLM call)
+
+contact:
+  # how bag/tube contact is decided: cv | vlm | and | or
+  fusion: or
+  cv_contact_px: 6          # tip-to-mask distance at 512 px width counted as touching
+  steady_px: 7              # tip motion (512 px width) per tick still counted as "steady"
+  hold_radius: 0.15         # normalised distance from bleed origin where pressure counts
+
+random_events:
+  enabled: true
+  kinds: [insufflation_loss, bp_drop, camera_fog, smoke]
+  first_after_s: 45         # grace period before the first random event
+
+sinks:
+  vr:
+    enabled: true
+    ws_url: ws://127.0.0.1:8787/ws
+    http_url: http://127.0.0.1:8787/api/events
+    name: nemotron-director
+  restyle:
+    enabled: true
+    url: http://127.0.0.1:8090     # live-restyle server on the GPU (POST /events)
+    path: /events
+  trace:
+    enabled: true
+    url: http://127.0.0.1:8787/api/trace   # dashboard feed (lap-sim-vr /dashboard.html)
+  vitals_period_s: 2.0
+
+log_dir: logs
