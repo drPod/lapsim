@@ -38,7 +38,7 @@ class GeminiEditEngine(SlowEditEngine):
 
     def edit(self, frame_bgr, prompt, prev_bgr):
         o = self.o
-        model = o.get("model", "gemini-nano-banana-2.1")
+        model = o.get("model", "gemini-3.1-flash-image")
         parts = [{"text": prompt},
                  {"inline_data": {"mime_type": "image/jpeg",
                                   "data": base64.b64encode(encode_jpeg(self.fit(frame_bgr), 92)).decode()}},
@@ -72,7 +72,7 @@ class GeminiEditEngine(SlowEditEngine):
         return img, self.cost(model, usage), usage
 
     def cost(self, model: str, u: dict) -> float | None:
-        p = {**PRICING.get(model, PRICING["gemini-nano-banana-2.1"]), **self.o.get("pricing", {})}
+        p = {**PRICING.get(model, PRICING["gemini-3.1-flash-image"]), **self.o.get("pricing", {})}
         if not u:
             return None
         img_out = sum(d.get("tokenCount", 0) for d in u.get("candidatesTokensDetails", []) if d.get("modality") == "IMAGE")
