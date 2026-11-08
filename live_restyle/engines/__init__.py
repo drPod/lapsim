@@ -6,6 +6,9 @@ def load_engine(name: str, cfg: dict):
     if name == "passthrough":
         from .passthrough import Passthrough
         return Passthrough(cfg)
+    if name == "klein":
+        from .klein import KleinEngine
+        return KleinEngine(cfg)
     if name == "gemini":
         from .gemini_edit import GeminiEditEngine
         return GeminiEditEngine(cfg)

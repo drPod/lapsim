@@ -20,13 +20,7 @@ gemini:
   paused: false
   reference: null                  # refs/target_style.png makes it copy the reference layout; keep null
   prompt: >-
-    Turn this photo into real laparoscopic cholecystectomy endoscope footage: glistening dark red-brown liver,
-    glossy grey-green gallbladder with fine red vessels, yellow lobulated fat, pale ducts, black 5 mm laparoscopic
-    graspers with metal jaws, wet specular highlights, endoscope light falloff, dark vignette. It is a photo of a
-    training box: the green bag is the gallbladder, the blue material is liver, the orange and clear tubes are the
-    cystic duct and artery, the black sticks are laparoscopic instruments. Keep EXACTLY the same composition:
-    every object, and especially both instruments, must stay at the same position, angle, length and tip location
-    as in the photo. Do not add or move instruments. No text, captions, labels or on-screen overlays.
+    Edit this training-box camera image into photorealistic laparoscopic gallbladder surgery. Replace ALL blue paper, blue sponge, blue fabric and blue tape beneath and around the green bag with a continuous broad surface of dark reddish-brown liver tissue. That entire blue region is the LIVER: smooth rounded organic lobes, wet glossy surface, fine vessels, no blue remaining, no paper edges, no fabric, no surgical drape. Transform the green plastic bag into ONE anatomically realistic gallbladder attached to the liver: a soft rounded pear-shaped sac with a bulbous fundus and gently tapering neck, muted grey-green translucent serosa, delicate branching red capillaries, subtle uneven tissue texture, tiny yellow fatty attachments near its neck, and a thin moist reflective film. Its surface is living tissue with fine natural wrinkles and soft irregular highlights, never polished plastic. Completely remove the bag's straight sealed seam, triangular corners, folded plastic edges and uniform shiny green surface. Keep the organ centered at the bag's exact position with the same overall size and orientation; round its corners into natural soft anatomy. The liver is underneath the gallbladder, not a separate organ added on top of it. Replace orange and transparent tubing with pale pink ducts and small vessels. Convert the two black sticks into black laparoscopic graspers with metal tips at exactly the same positions, angles and tip locations. Preserve instrument geometry and camera composition. Surround the organs with dark moist abdominal tissue and some yellow fat; conceal the cardboard box and all training materials. Real endoscope lighting, wet highlights, dark vignette. No text, labels or overlays.
 
 openai:
   model: gpt-image-2.5-flare        # gpt-image-2.6-flare | gpt-image-2.6-sunburst | gpt-image-2.5-sunburst | gpt-image-1.5 ...
