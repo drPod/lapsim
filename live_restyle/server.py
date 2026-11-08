@@ -97,6 +97,33 @@ class Service:
             if time.time() - nxt > 1:
                 nxt = time.time()
 
+    def mjpeg_source(self, url: str) -> None:
+        """Pull an MJPEG stream (e.g. the Pi box-tracker's /stream.mjpg) without taking the camera."""
+        import httpx
+        while self.running:
+            try:
+                with httpx.stream("GET", url, timeout=httpx.Timeout(10, read=10)) as r:
+                    log.info("mjpeg source connected: %s", url)
+                    buf = b""
+                    for chunk in r.iter_bytes():
+                        buf += chunk
+                        while True:
+                            a = buf.find(b"\xff\xd8")
+                            b = buf.find(b"\xff\xd9", a + 2)
+                            if a < 0 or b < 0:
+                                break
+                            jpg = buf[a:b + 2]
+                            buf = buf[b + 2:]
+                            try:
+                                self.push(decode_jpeg(jpg), time.time(), jpg)
+                            except ValueError:
+                                pass
+                        if len(buf) > 4_000_000:
+                            buf = b""
+            except Exception as e:
+                log.warning("mjpeg source error: %s; retrying", e)
+                time.sleep(2)
+
     # ----------------------------------------------------------- engine
     def engine_loop(self) -> None:
         from .engines import load_engine
@@ -159,11 +186,11 @@ class Service:
             self.lat["glass_to_out_ms"] = 0.8 * self.lat["glass_to_out_ms"] + 0.2 * (now - f.t_cap) * 1000
             self.out.publish(o)
 
-    def present(self, f: Frame, img: np.ndarray, meta: dict | None = None) -> None:
+    def present(self, f: Frame, img: np.ndarray, meta: dict | None = None) -> bool:
         """Publish a slow-engine result: hold the last good frame, crossfade to the new one."""
         with self._present_lock:
             if f.t_cap < self._shown_t_cap:
-                return  # an older request finished after a newer one; drop it
+                return False  # an older request finished after a newer one; drop it
             self._shown_t_cap = f.t_cap
             self.gen_seq += 1
             gen = self.gen_seq
@@ -183,18 +210,19 @@ class Service:
         fps = float(o.get("crossfade_fps", 15))
         if prev is None or xf <= 0 or prev.img.shape != img.shape:
             self.out.publish(Frame(f.seq, img, f.t_cap, f.t_recv, meta={"t_out": now, **info}))
-            return
+            return True
         a_img = prev.img.astype(np.float32)
         b_img = img.astype(np.float32)
         n = max(1, int(xf * fps))
         for i in range(1, n + 1):
             if self.gen_seq != gen:
-                return  # a newer result took over
+                return True  # a newer result took over
             a = i / n
             a = a * a * (3 - 2 * a)  # smoothstep
             mix = (a_img * (1 - a) + b_img * a).astype(np.uint8) if i < n else img
             self.out.publish(Frame(f.seq, mix, f.t_cap, f.t_recv, meta={"t_out": time.time(), **info}))
             time.sleep(1 / fps)
+        return True
 
     def stats(self) -> dict:
         return {
@@ -363,7 +391,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config/restyle.yaml")
     ap.add_argument("--engine", default=None, help="override engine in config")
-    ap.add_argument("--source", default=None, help="file:<video> to loop a clip instead of /ingest")
+    ap.add_argument("--source", default=None, help="file:<video> to loop a clip, or http://.../stream.mjpg to pull MJPEG, instead of /ingest")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8090)
     ap.add_argument("--rtsp", default=None, help="also publish output to this RTSP URL (MediaMTX → WHEP)")
@@ -375,6 +403,8 @@ def main() -> None:
     threading.Thread(target=svc.playout_loop, daemon=True, name="playout").start()
     if args.source and args.source.startswith("file:"):
         threading.Thread(target=svc.file_source, args=(args.source[5:],), daemon=True, name="file").start()
+    elif args.source and args.source.startswith(("http://", "https://")):
+        threading.Thread(target=svc.mjpeg_source, args=(args.source,), daemon=True, name="mjpeg").start()
     rtsp = args.rtsp or svc.cfg.get("output", {}).get("rtsp")
     if rtsp:
         from .publish import RtspPublisher

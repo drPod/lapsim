@@ -1,5 +1,27 @@
 # live-restyle configuration. Hot-reload with: curl -X POST http://<gpu>:8090/config/reload
-engine: openai               # openai | edit (open model on GPU, every frame) | hybrid | passthrough
+engine: gemini               # gemini | openai | edit (open model on GPU, every frame) | hybrid | passthrough
+
+# Google Gemini image edit ("Nano Banana 2" family). Picture 1 = live frame, picture 2 = approved style.
+gemini:
+  model: gemini-nano-banana-2.1     # gemini-3.1-flash-image (Nano Banana 2) | gemini-3.1-flash-lite-image | gemini-3-pro-image
+  image_size: 1K                    # 1K | 2K | 4K (512 only on gemini-3.1-flash-image)
+  aspect_ratio: "16:9"
+  thinking_level: minimal           # 2.1: minimal|medium|high ; 3.1 flash: minimal|high
+  temperature: null
+  seed: null
+  input_max_side: 1280
+  concurrency: 4                    # staggered requests in flight → a new frame every ~expected_s/concurrency
+  expected_s: 6
+  min_interval_s: 0
+  use_previous: false               # also send the last output as picture 3 for continuity
+  previous_prompt: >-
+    Picture 3 is the previous frame of this same video; keep the tissue colours, textures, vessels and lighting
+    consistent with it, but follow picture 1 for every object's position and shape.
+  paused: false
+  reference: refs/target_style.png
+  prompt: >-
+    Repaint image 1 so it looks exactly like the surgical style, lighting, tissue colours and textures of image 2,
+    keeping every object of image 1 in the same position, shape and angle.
 
 # OpenAI Images edit backend (picture 1 = live frame, picture 2 = approved style reference)
 openai:
@@ -13,6 +35,10 @@ openai:
   concurrency: 1                    # requests in flight (staggered); cost scales linearly
   expected_s: 20
   min_interval_s: 0
+  use_previous: false
+  previous_prompt: >-
+    Image 3 is the previous frame of this same video; keep the tissue colours, textures, vessels and lighting
+    consistent with it, but follow image 1 for every object's position and shape.
   paused: false
   reference: refs/target_style.png
   prompt: >-
