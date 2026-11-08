@@ -10,8 +10,8 @@ gemini:
   temperature: null
   seed: null
   input_max_side: 1280
-  concurrency: 4                    # staggered requests in flight → a new frame every ~expected_s/concurrency
-  expected_s: 6
+  concurrency: 1                    # staggered requests in flight; ~$0.07 and ~10-19 s each at 1K, so 1 ≈ $15-25/hr
+  expected_s: 14
   min_interval_s: 0
   use_previous: false               # also send the last output as picture 3 for continuity
   previous_prompt: >-
